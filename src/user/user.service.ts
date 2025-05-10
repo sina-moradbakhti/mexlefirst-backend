@@ -45,4 +45,10 @@ export class UserService {
     async findAll(): Promise<UserDocument[]> {
         return this.userModel.find().exec();
     }
+
+    async isThereAnyAdmin(): Promise<UserDocument> {
+        return this.userModel.findOne({
+            role: 'admin',
+        }).exec();
+    }
 }

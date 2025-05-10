@@ -14,12 +14,23 @@ import { ImageModule } from './image/image.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: process.env.NODE_ENV === 'production'
+        ? '.env.production'   // production env file
+        : '.env.development', // development env file
+      cache: true,
+      expandVariables: true,
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = configService.get<string>('MONGODB_URI');
+        if (!uri) {
+          throw new Error('MONGODB_URI is not defined in environment variables');
+        }
+        return {
+          uri,
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,

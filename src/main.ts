@@ -5,10 +5,15 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import rateLimit from 'express-rate-limit';
+import * as bodyParser from 'body-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
+  const environment = configService.get<string>('NODE_ENV') || 'development';
+
+  console.log(`Application running in ${environment} mode`);
 
   // Global pipes
   app.useGlobalPipes(new ValidationPipe({
@@ -18,25 +23,66 @@ async function bootstrap() {
   }));
 
   // Serve static files
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  const uploadDir = configService.get<string>('UPLOAD_DIR') || 'uploads';
+  app.useStaticAssets(join(__dirname, '..', uploadDir), {
     prefix: '/uploads/',
   });
 
-  // CORS
-  app.enableCors();
+  /* Enable CSRF */
+  // app.use(cookieParser());
+  // app.use(csurf({ cookie: { sameSite: true } }));
+  app.use((req: any, res: any, next: any) => {
+    // const token = req.csrfToken();
+    // res.cookie('XSRF-TOKEN', token);
+    // res.locals.csrfToken = token;
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Content-Security-Policy', "default-src 'self'");
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    next();
+  });
 
-  // Swagger setup
-  const config = new DocumentBuilder()
-    .setTitle('API Documentation')
-    .setDescription('The API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+
+  /* Enable rate limiting */
+  app.use(rateLimit({
+    windowMs: 5 * 60000, // 5 minutes
+    standardHeaders: true,
+    max: environment === 'production' ? 100 : 1000, // Stricter limits in production
+  }));
+
+  /* Enable CORS */
+  const corsOrigins = environment === 'production' 
+    ? ['https://flutter-web-app', 'https://admin-dev.campusconnects.de', 'https://landing.campusconnects.de']
+    : ['http://localhost:4200', 'http://localhost:8200', 'http://localhost:8080', 
+       'http://flutter-web-app', 'https://flutter-web-app', 
+       'http://admin-dev.campusconnects.de', 'https://admin-dev.campusconnects.de'];
+
+  app.enableCors({
+    origin: corsOrigins,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
+  // Swagger setup (only in development and staging)
+  if (environment !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('API Documentation')
+      .setDescription('The API description')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   // Start server
   const port = configService.get<number>('PORT') || 3000;
+
+  // Body parser configuration
+  const maxFileSize = configService.get<string>('MAX_FILE_SIZE') || '10mb';
+  app.use(bodyParser.json({ limit: maxFileSize }));
+  app.use(bodyParser.urlencoded({ limit: maxFileSize, extended: true }));
+
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
 }

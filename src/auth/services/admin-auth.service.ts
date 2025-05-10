@@ -13,8 +13,15 @@ export class AdminAuthService {
         private jwtService: JwtService,
     ) { }
 
-    async register(registerDto: RegisterDto): Promise<{ token: string }> {
+    async register(registerDto: RegisterDto, role: UserRole = UserRole.ADMIN): Promise<{ token: string }> {
         const { email, password } = registerDto;
+
+        if(role == UserRole.ADMIN){
+            // only one admin must be created
+            if (await this.userService.isThereAnyAdmin()) {
+                throw new ConflictException('You cannot create the admin!');
+            }
+        }
 
         const existingUser = await this.userService.findByEmail(email);
         if (existingUser) {
@@ -25,18 +32,22 @@ export class AdminAuthService {
         const user = await this.userService.create({
             email,
             password: hashedPassword,
-            role: UserRole.ADMIN,
+            role: role,
         });
 
         const token = this.jwtService.sign({ id: user._id, email: user.email, role: user.role });
         return { token };
     }
 
-    async login(loginDto: LoginDto): Promise<{ token: string }> {
+    async login(loginDto: LoginDto, role: UserRole = UserRole.ADMIN): Promise<{ token: string }> {
         const { email, password } = loginDto;
 
         const user = await this.userService.findByEmail(email);
         if (!user) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        if (user.role !== role) {
             throw new UnauthorizedException('Invalid credentials');
         }
 

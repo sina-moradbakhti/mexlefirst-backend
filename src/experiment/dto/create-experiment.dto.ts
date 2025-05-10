@@ -1,10 +1,18 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateExperimentDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   experimentType: string;
 
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  experimentId: string;
+
+  @ApiProperty()
   @IsString()
   @IsOptional()
   description?: string;

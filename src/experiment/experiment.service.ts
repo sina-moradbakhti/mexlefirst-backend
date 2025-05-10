@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Experiment, ExperimentDocument } from './schemas/experiment.schema';
 import { CreateExperimentDto } from './dto/create-experiment.dto';
 import { UpdateExperimentDto } from './dto/update-experiment.dto';
+import { DuplicateKeysException } from 'src/shared/errors/duplicate-keys.exception';
 
 @Injectable()
 export class ExperimentService {
@@ -12,8 +13,18 @@ export class ExperimentService {
   ) {}
 
   async create(createExperimentDto: CreateExperimentDto): Promise<Experiment> {
-    const createdExperiment = new this.experimentModel(createExperimentDto);
-    return createdExperiment.save();
+    try{
+      const createdExperiment = new this.experimentModel({
+        experimentId: createExperimentDto.experimentId,
+        experimentType: createExperimentDto.experimentType,
+        description: createExperimentDto.description,
+        instructorId: createExperimentDto.instructorId,
+      });
+      return createdExperiment.save();
+    } catch (error) {
+      console.log(error);
+      throw new DuplicateKeysException('ExperimentId');
+    }
   }
 
   async findAll(): Promise<Experiment[]> {

@@ -1,4 +1,61 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { MulterModule } from '@nestjs/platform-express';
+import { Image, ImageSchema } from './schemas/image.schema';
+import { ImageController } from './controllers/image.controller';
+import { ImageService } from './services/image.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UnsupportedFileTypeException } from 'src/shared/errors/unsupported-file-type.exception';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
-@Module({})
-export class ImageModule {}
+@Module({
+    imports: [
+        MongooseModule.forFeature([
+            { name: Image.name, schema: ImageSchema },
+        ]),
+        MulterModule.registerAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: async (configService: ConfigService) => ({
+                storage: diskStorage({
+                    destination: configService.get<string>('UPLOAD_DIR'),
+                    filename: (req, file, callback) => {
+                        const date = new Date();
+                        // Format: YYYYMMDD
+                        const formattedDate = date.getFullYear().toString() +
+                            (date.getMonth() + 1).toString().padStart(2, '0') +
+                            date.getDate().toString().padStart(2, '0');
+                        
+                        // Format: HHMM
+                        const formattedTime = date.getHours().toString().padStart(2, '0') +
+                            date.getMinutes().toString().padStart(2, '0');
+                        
+                        // Generate random 5 digits
+                        const randomDigits = Math.floor(Math.random() * 90000 + 10000);
+                        
+                        // Get file extension from original filename
+                        const fileExt = extname(file.originalname);
+                        
+                        // Final format: YYYYMMDD-HHMM-XXXXX.ext
+                        const filename = `${formattedDate}-${formattedTime}-${randomDigits}${fileExt}`;
+                        callback(null, filename);
+                    }
+                }),
+                limits: {
+                    fileSize: parseInt(configService.get<string>('MAX_FILE_SIZE')),
+                },
+                fileFilter: (req, file, callback) => {
+                    if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+                        return callback(new UnsupportedFileTypeException(), false);
+                    }
+                    callback(null, true);
+                },
+            })
+        }),
+    ],
+    controllers: [ImageController],
+    providers: [ImageService],
+    exports: [ImageService],
+})
+export class ImageModule { }
