@@ -1,11 +1,13 @@
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { RegisterDto } from '../shared/dtos/register.dto';
-import { LoginDto } from '../shared/dtos/login.dto';
+import { RegisterDto } from '../../shared/dtos/register.dto';
+import { LoginDto } from '../../shared/dtos/login.dto';
+import { AdminAuthService } from '../services/admin-auth.service';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller('auth')
-export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+@ApiTags('Admin Auth 👑')
+@Controller('admin/auth')
+export class AdminAuthController {
+    constructor(private readonly authService: AdminAuthService) {}
 
     @Post('register')
     @HttpCode(HttpStatus.CREATED)

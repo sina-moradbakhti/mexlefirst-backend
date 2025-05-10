@@ -6,6 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
+import { ExperimentModule } from './experiment/experiment.module';
+import { ImageModule } from './image/image.module';
 
 
 @Module({
@@ -22,6 +24,8 @@ import { UserModule } from './user/user.module';
     }),
     AuthModule,
     UserModule,
+    ExperimentModule,
+    ImageModule,
   ],
   controllers: [AppController],
   providers: [AppService],
