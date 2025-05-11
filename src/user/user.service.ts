@@ -3,6 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UserRole } from 'src/shared/enums/user.enum';
+import { PaginationDto, PaginatedResponse } from '../shared/dto/pagination.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
 export class UserService {
@@ -42,8 +45,42 @@ export class UserService {
         return this.userModel.findById(id).exec();
     }
 
-    async findAll(): Promise<UserDocument[]> {
-        return this.userModel.find().exec();
+    /**
+     * Find all users with pagination support
+     * @param userRole Optional role to filter users
+     * @param pagination Pagination parameters
+     * @returns Paginated response containing users and pagination metadata
+     */
+    async findAll(
+        userRole: UserRole = null,
+        pagination: PaginationDto = new PaginationDto()
+    ): Promise<PaginatedResponse<UserDocument>> {
+        const query = {};
+
+        if (userRole) {
+            query['role'] = userRole;
+        }
+
+        const skip = (pagination.page - 1) * pagination.limit;
+
+        const [items, total] = await Promise.all([
+            this.userModel
+                .find(query)
+                .skip(skip)
+                .limit(pagination.limit)
+                .exec(),
+            this.userModel.countDocuments(query).exec(),
+        ]);
+
+        const pages = Math.ceil(total / pagination.limit);
+
+        return {
+            data: items,
+            total,
+            page: pagination.page,
+            limit: pagination.limit,
+            pages,
+        };
     }
 
     async isThereAnyAdmin(): Promise<UserDocument> {

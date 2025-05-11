@@ -1,13 +1,14 @@
 import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserService } from './user.service';
-import { User } from './schemas/user.schema';
-import { UserRole } from '../shared/enums/user.enum';
-import { UserResponseDto } from './dto/user-response.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserService } from '../user.service';
+import { User, UserDocument } from '../schemas/user.schema';
+import { UserRole } from '../../shared/enums/user.enum';
+import { UserResponseDto } from '../dto/user-response.dto';
 import { AuthenticatedRequest } from 'src/auth/interfaces/authenticated-request.interface';
+import { PaginatedResponse } from 'src/shared/dto/pagination.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -38,9 +39,8 @@ export class UserController {
         type: [UserResponseDto]
     })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin access required.' })
-    async findAll(): Promise<UserResponseDto[]> {
-        const users = await this.userService.findAll();
-        return users.map(user => this.transformToDto(user));
+    async findAll(): Promise<PaginatedResponse<UserDocument>> {
+        return await this.userService.findAll();
     }
 
     @Get(':id')
