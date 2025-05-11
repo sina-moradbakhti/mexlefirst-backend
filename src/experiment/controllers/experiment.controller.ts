@@ -10,10 +10,10 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ExperimentService } from './experiment.service';
-import { CreateExperimentDto } from './dto/create-experiment.dto';
-import { UpdateExperimentDto } from './dto/update-experiment.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ExperimentService } from '../experiment.service';
+import { CreateExperimentDto } from '../dto/create-experiment.dto';
+import { UpdateExperimentDto } from '../dto/update-experiment.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';

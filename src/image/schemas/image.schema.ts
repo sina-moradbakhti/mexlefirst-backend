@@ -25,6 +25,9 @@ export class Image {
   @Prop({ default: 'pending' })
   processingStatus: string;
 
+  @Prop({ default: '' })
+  feedback: string;
+
   @Prop({ type: [Object], default: [] })
   detectedComponents: Record<string, any>[];
 }

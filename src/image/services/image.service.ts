@@ -7,13 +7,85 @@ import { UploadImageDto } from '../dtos/upload-image.dto';
 import { ConfigService } from '@nestjs/config';
 import { ObjectId } from 'mongodb';
 import * as fs from 'fs';
+import { ImageFilterDto } from 'src/shared/dto/image-filter.dto';
+import { PaginatedResponse } from 'src/shared/dto/filter.dto';
+import { Experiment, ExperimentDocument } from 'src/experiment/schemas/experiment.schema';
+import { User, UserDocument } from 'src/user/schemas/user.schema';
 
 @Injectable()
 export class ImageService {
     constructor(
         @InjectModel(Image.name) private imageModel: Model<ImageDocument>,
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
+        @InjectModel(Experiment.name) private experimentModel: Model<ExperimentDocument>,
         private configService: ConfigService,
     ) { }
+
+    async findAll(filter: ImageFilterDto): Promise<PaginatedResponse<ImageDocument>> {
+        const query = {};
+
+        if (filter.userId) {
+            const user = await this.userModel.findOne({
+                email: filter.userId,
+                role: 'student',
+            })
+                .exec();
+
+            if (user) {
+                query['userId'] = user._id;
+            }else{
+                return {
+                    data: [],
+                    total: 0,
+                    page: filter.page,
+                    limit: filter.limit,
+                    pages: 0,
+                };
+            }
+        }
+
+        if (
+            filter.search &&
+            filter.searchBy &&
+            ['experimentId'].includes(filter.searchBy)
+        ) {
+            const expIds = await this.experimentModel.find({
+                experimentId: {
+                    $regex: filter.search,
+                    $options: 'i',
+                },
+            })
+                .exec();
+
+            query['experimentId'] = {
+                $in: expIds.map(exp => exp._id),
+            };
+        }
+
+        const skip = (filter.page - 1) * filter.limit;
+
+        const [items, total] = await Promise.all([
+            this.imageModel
+                .find(query)
+                .populate('experimentId')
+                .populate('userId')
+                .skip(skip)
+                .limit(filter.limit)
+                .exec(),
+            this.imageModel.countDocuments(query).exec(),
+        ]);
+
+        const pages = Math.ceil(total / filter.limit);
+
+        return {
+            data: items,
+            total,
+            page: filter.page,
+            limit: filter.limit,
+            pages,
+        };
+
+    }
 
     async uploadImage(file: Express.Multer.File, uploadImageDto: UploadImageDto): Promise<ImageResponseDto> {
         if (!file) {

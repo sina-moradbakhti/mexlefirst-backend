@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ExperimentController } from './experiment.controller';
+import { ExperimentController } from './controllers/experiment.controller';
 import { ExperimentService } from './experiment.service';
 import { Experiment, ExperimentSchema } from './schemas/experiment.schema';
+import { InstructorExperimentController } from './controllers/instructor-experiment.controller';
 
 @Module({
     imports: [
@@ -10,7 +11,10 @@ import { Experiment, ExperimentSchema } from './schemas/experiment.schema';
             { name: Experiment.name, schema: ExperimentSchema },
         ]),
     ],
-    controllers: [ExperimentController],
+    controllers: [
+        ExperimentController,
+        InstructorExperimentController,
+    ],
     providers: [ExperimentService],
     exports: [ExperimentService],
 })

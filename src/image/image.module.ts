@@ -8,11 +8,16 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UnsupportedFileTypeException } from 'src/shared/errors/unsupported-file-type.exception';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { InstructorImageController } from './controllers/instructor-image.controller';
+import { Experiment, ExperimentSchema } from 'src/experiment/schemas/experiment.schema';
+import { User, UserSchema } from 'src/user/schemas/user.schema';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: Image.name, schema: ImageSchema },
+            { name: User.name, schema: UserSchema },
+            { name: Experiment.name, schema: ExperimentSchema },
         ]),
         MulterModule.registerAsync({
             imports: [ConfigModule],
@@ -54,7 +59,10 @@ import { extname } from 'path';
             })
         }),
     ],
-    controllers: [ImageController],
+    controllers: [
+        ImageController,
+        InstructorImageController,
+    ],
     providers: [ImageService],
     exports: [ImageService],
 })
