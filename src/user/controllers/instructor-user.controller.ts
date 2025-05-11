@@ -6,7 +6,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserService } from '../user.service';
 import { User, UserDocument } from '../schemas/user.schema';
 import { UserRole } from '../../shared/enums/user.enum';
-import { PaginatedResponse, PaginationDto } from 'src/shared/dto/pagination.dto';
+import { FilterDto, PaginatedResponse } from 'src/shared/dto/filter.dto';
 import { UserResponseDto } from '../dto/user-response.dto';
 
 @ApiTags('Instructors')
@@ -26,7 +26,7 @@ export class InstructorUserController {
     })
     @ApiResponse({ status: 403, description: 'Forbidden - Admin access required.' })
     async findAllStudents(
-        @Query() paginationDto: PaginationDto,
+        @Query() paginationDto: FilterDto,
     ): Promise<PaginatedResponse<UserDocument>> {
         return await this.userService.findAll(
             UserRole.STUDENT,

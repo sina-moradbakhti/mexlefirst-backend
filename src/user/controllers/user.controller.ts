@@ -8,7 +8,7 @@ import { User, UserDocument } from '../schemas/user.schema';
 import { UserRole } from '../../shared/enums/user.enum';
 import { UserResponseDto } from '../dto/user-response.dto';
 import { AuthenticatedRequest } from 'src/auth/interfaces/authenticated-request.interface';
-import { PaginatedResponse } from 'src/shared/dto/pagination.dto';
+import { PaginatedResponse } from 'src/shared/dto/filter.dto';
 
 @ApiTags('Users')
 @Controller('users')

@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNumber, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class PaginationDto {
+export class FilterDto {
     @ApiPropertyOptional({ default: 1, minimum: 1 })
     @Type(() => Number)
     @IsNumber()
@@ -16,6 +16,22 @@ export class PaginationDto {
     @IsOptional()
     @Min(1)
     limit?: number = 10;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    search?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    searchBy?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    sort?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    order?: string;
 }
 
 export interface PaginatedResponse<T> {

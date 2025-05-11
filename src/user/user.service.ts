@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserRole } from 'src/shared/enums/user.enum';
-import { PaginationDto, PaginatedResponse } from '../shared/dto/pagination.dto';
+import { FilterDto, PaginatedResponse } from '../shared/dto/filter.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 
 @Injectable()
@@ -53,7 +53,7 @@ export class UserService {
      */
     async findAll(
         userRole: UserRole = null,
-        pagination: PaginationDto = new PaginationDto()
+        filter: FilterDto = new FilterDto()
     ): Promise<PaginatedResponse<UserDocument>> {
         const query = {};
 
@@ -61,24 +61,35 @@ export class UserService {
             query['role'] = userRole;
         }
 
-        const skip = (pagination.page - 1) * pagination.limit;
+        if (
+            filter.search &&
+            filter.searchBy &&
+            ['email'].includes(filter.searchBy)
+        ) {
+            query[filter.searchBy] = {
+                $regex: filter.search,
+                $options: 'i',
+            };
+        }
+
+        const skip = (filter.page - 1) * filter.limit;
 
         const [items, total] = await Promise.all([
             this.userModel
                 .find(query)
                 .skip(skip)
-                .limit(pagination.limit)
+                .limit(filter.limit)
                 .exec(),
             this.userModel.countDocuments(query).exec(),
         ]);
 
-        const pages = Math.ceil(total / pagination.limit);
+        const pages = Math.ceil(total / filter.limit);
 
         return {
             data: items,
             total,
-            page: pagination.page,
-            limit: pagination.limit,
+            page: filter.page,
+            limit: filter.limit,
             pages,
         };
     }
