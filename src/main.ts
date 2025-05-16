@@ -53,9 +53,7 @@ async function bootstrap() {
   /* Enable CORS */
   const corsOrigins = environment === 'production'
     ? ['https://flutter-web-app', 'https://admin-dev.campusconnects.de', 'https://landing.campusconnects.de']
-    : ['http://localhost:4200', 'http://localhost:8200', 'http://localhost:8080',
-      'http://flutter-web-app', 'https://flutter-web-app',
-      'http://admin-dev.campusconnects.de', 'https://admin-dev.campusconnects.de'];
+    : '*';
 
   app.enableCors({
     origin: corsOrigins,
