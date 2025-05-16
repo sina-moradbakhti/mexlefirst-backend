@@ -52,7 +52,7 @@ async function bootstrap() {
 
   /* Enable CORS */
   const corsOrigins = environment === 'production'
-    ? ['https://flutter-web-app', 'https://admin-dev.campusconnects.de', 'https://landing.campusconnects.de']
+    ? ['https://app.mexle.org', 'https://admin-panel.mexle.org']
     : '*';
 
   app.enableCors({
