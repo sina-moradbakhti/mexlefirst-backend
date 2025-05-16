@@ -47,8 +47,19 @@ export class ExperimentController {
     description: 'Retrieves all experiments associated with the authenticated user. Accessible by students, instructors, and admins.'
   })
   @ApiResponse({ status: 200, description: 'List of user experiments retrieved successfully' })
-  findAll(@Request() req) {
+  findAllBasedOnUser(@Request() req) {
     return this.experimentService.findByUserId(req.user.id);
+  }
+
+  @Get('all')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get all of experiments [Student Only]',
+    description: 'Retrieves all experiments. Accessible by students only.'
+  })
+  @ApiResponse({ status: 200, description: 'List of all experiments retrieved successfully' })
+  findAll() {
+    return this.experimentService.findAll({});
   }
 
   @Get(':id')

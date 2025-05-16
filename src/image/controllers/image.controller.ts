@@ -10,7 +10,8 @@ import {
     UseGuards,
     Body,
     Request,
-    BadRequestException
+    BadRequestException,
+    Get
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageService } from '../services/image.service';
@@ -62,5 +63,15 @@ export class ImageController {
     @HttpCode(HttpStatus.NO_CONTENT)
     async deleteImage(@Param('imageId') imageId: string): Promise<void> {
         await this.imageService.deleteImage(imageId);
+    }
+
+    @Roles(UserRole.STUDENT)
+    @ApiOperation({
+        summary: 'Fetch Image by experimentId [Student Only]',
+    })
+    @ApiResponse({ status: 403, description: 'Forbidden - User is not a student' })
+    @Get(':experimentId')
+    async fetchImage(@Param('experimentId') experimentId: string): Promise<ImageResponseDto> {
+        return this.imageService.fetchImage(experimentId);
     }
 }

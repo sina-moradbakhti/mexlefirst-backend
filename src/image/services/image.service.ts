@@ -133,6 +133,19 @@ export class ImageService {
         };
     }
 
+    async fetchImage(experimentId: string): Promise<ImageResponseDto> {
+        const image = await this.imageModel.findOne({ experimentId }).exec();
+        if (!image) {
+            throw new BadRequestException('Image not found');
+        }
+        
+        return {
+            url: image.imageUrl,
+            filename: image.originalFilename,
+            mimetype: image.mimetype,
+        };
+    }
+
     async deleteImage(filename: string): Promise<void> {
         // Implement delete logic here
         // This would typically involve:
