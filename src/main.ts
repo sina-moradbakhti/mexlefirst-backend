@@ -30,18 +30,29 @@ async function bootstrap() {
 
   app.useStaticAssets(staticPath, {
     prefix: '/uploads/',
+    setHeaders: (res, path, stat) => {
+      // Set proper headers for static files
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    }
   });
 
   /* Enable CSRF */
   // app.use(cookieParser());
   // app.use(csurf({ cookie: { sameSite: true } }));
+  /* Security Headers */
   app.use((req: any, res: any, next: any) => {
-    // const token = req.csrfToken();
-    // res.cookie('XSRF-TOKEN', token);
-    // res.locals.csrfToken = token;
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Content-Security-Policy', "default-src 'self' https://app.mexle.org; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';");
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' https://app.mexle.org; " +
+      "img-src 'self' data: blob: https: *; " +  // More permissive for images
+      "style-src 'self' 'unsafe-inline'; " +
+      "connect-src 'self' https://app.mexle.org https://admin-panel.mexle.org;"
+    );
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     next();
   });
@@ -65,11 +76,21 @@ async function bootstrap() {
 
   app.enableCors({
     origin: corsOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Origin', 'X-Requested-With'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Origin',
+      'X-Requested-With',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+    ],
     exposedHeaders: ['Content-Disposition', 'Content-Length'],
     credentials: true,
     maxAge: 3600,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   });
 
   // Swagger setup (only in development and staging)
