@@ -17,6 +17,11 @@ export class CreateExperimentDto {
   @IsOptional()
   description?: string;
 
+  @ApiProperty({ enum: ['active', 'inactive'], default: 'active' })
+  @IsOptional()
+  @IsString()
+  status: 'active' | 'inactive';
+
   // This will be set automatically from the authenticated user
   instructorId: string;
 }

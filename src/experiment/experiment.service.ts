@@ -21,6 +21,7 @@ export class ExperimentService {
         experimentType: createExperimentDto.experimentType,
         description: createExperimentDto.description,
         instructorId: createExperimentDto.instructorId,
+        status: createExperimentDto.status,
       });
       return createdExperiment.save();
     } catch (error) {
@@ -49,11 +50,17 @@ export class ExperimentService {
 
     const skip = (filter.page - 1) * filter.limit;
 
+    const sort = filter.sort || 'createdAt';
+    const order = filter.order || 'desc';
+
     const [items, total] = await Promise.all([
       this.experimentModel
         .find(query)
         .skip(skip)
         .limit(filter.limit)
+        .sort({
+          [sort]: order === 'asc' ? 1 : -1,
+        })
         .exec(),
       this.experimentModel.countDocuments(query).exec(),
     ]);

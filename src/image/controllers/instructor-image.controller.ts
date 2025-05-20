@@ -44,4 +44,21 @@ export class InstructorImageController {
     ) {
         return this.imageService.findAll(filterDto);
     }
+
+    @Delete(':id')
+    @Roles(UserRole.INSTRUCTOR)
+    @ApiOperation({
+        summary: 'Delete image [Instructor Only]',
+        description: 'Deletes an image by its ID. This endpoint is restricted to instructors only.'
+    })
+    @ApiResponse({ status: 200, description: 'Image successfully deleted' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 403, description: 'Forbidden - User is not an instructor' })
+    @ApiResponse({ status: 404, description: 'Image not found' })
+    @HttpCode(HttpStatus.OK)
+    async deleteImage(
+        @Param('id') id: string,
+    ) {
+        return this.imageService.deleteImage(id);
+    }
 }

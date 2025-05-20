@@ -102,17 +102,4 @@ export class ExperimentController {
   updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.experimentService.updateStatus(id, status);
   }
-
-  @Delete(':id')
-  @Roles(UserRole.INSTRUCTOR)
-  @ApiOperation({
-    summary: 'Delete experiment [Instructor Only]',
-    description: 'Deletes an experiment by its ID. This endpoint is restricted to instructors only.'
-  })
-  @ApiResponse({ status: 200, description: 'Experiment deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Experiment not found' })
-  @ApiResponse({ status: 403, description: 'Forbidden - User is not a student' })
-  remove(@Param('id') id: string) {
-    return this.experimentService.remove(id);
-  }
 }

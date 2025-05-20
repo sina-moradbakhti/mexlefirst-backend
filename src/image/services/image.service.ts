@@ -146,10 +146,27 @@ export class ImageService {
         };
     }
 
-    async deleteImage(filename: string): Promise<void> {
-        // Implement delete logic here
-        // This would typically involve:
-        // 1. Removing the file from storage
-        // 2. Removing any database records if applicable
+    async deleteImage(fileId: string): Promise<void> {
+
+        const image = await this.imageModel.findById(fileId).exec();
+        if (!image) {
+            throw new BadRequestException('File not found');
+        }
+        const filename = image.originalFilename;
+
+        const filePath = `${this.configService.get<string>('UPLOAD_DIR')}/${filename}`;
+        try {
+            await fs.promises.access(filePath, fs.constants.F_OK);
+        }
+        catch (error) {
+            throw new BadRequestException('File not found');
+        }
+        try {
+            await fs.promises.unlink(filePath);
+            await this.imageModel.deleteOne({ _id: fileId }).exec();
+        }
+        catch (error) {
+            throw new BadRequestException('Failed to delete file');
+        }
     }
 }
