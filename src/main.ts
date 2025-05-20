@@ -24,7 +24,7 @@ async function bootstrap() {
 
   // Serve static files
   const uploadDir = configService.get<string>('UPLOAD_DIR') || 'uploads';
-  const staticPath = environment === 'production' 
+  const staticPath = environment === 'production'
     ? join(__dirname, '../../../', uploadDir)
     : join(__dirname, '..', uploadDir);
 
@@ -56,7 +56,11 @@ async function bootstrap() {
 
   /* Enable CORS */
   const corsOrigins = environment === 'production'
-    ? ['https://app.mexle.org', 'https://admin-panel.mexle.org']
+    ? [
+      'https://app.mexle.org',
+      'https://admin-panel.mexle.org',
+      'https://app.mexle.org/#/experiments-details',
+    ]
     : '*';
 
   app.enableCors({
