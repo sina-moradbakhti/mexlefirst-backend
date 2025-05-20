@@ -41,7 +41,7 @@ async function bootstrap() {
     // res.locals.csrfToken = token;
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Content-Security-Policy', "default-src 'self'");
+    res.setHeader('Content-Security-Policy', "default-src 'self' https://app.mexle.org; img-src 'self' data: https:; style-src 'self' 'unsafe-inline';");
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     next();
   });
@@ -65,8 +65,11 @@ async function bootstrap() {
 
   app.enableCors({
     origin: corsOrigins,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'Origin', 'X-Requested-With'],
+    exposedHeaders: ['Content-Disposition', 'Content-Length'],
     credentials: true,
+    maxAge: 3600,
   });
 
   // Swagger setup (only in development and staging)
