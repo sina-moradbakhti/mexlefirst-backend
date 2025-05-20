@@ -11,6 +11,7 @@ import { ImageFilterDto } from 'src/shared/dto/image-filter.dto';
 import { PaginatedResponse } from 'src/shared/dto/filter.dto';
 import { Experiment, ExperimentDocument } from 'src/experiment/schemas/experiment.schema';
 import { User, UserDocument } from 'src/user/schemas/user.schema';
+import { AddFeedbackDto } from '../dtos/add-feedback.dto';
 
 @Injectable()
 export class ImageService {
@@ -33,7 +34,7 @@ export class ImageService {
 
             if (user) {
                 query['userId'] = user._id;
-            }else{
+            } else {
                 return {
                     data: [],
                     total: 0,
@@ -138,7 +139,7 @@ export class ImageService {
         if (!image) {
             throw new BadRequestException('Image not found');
         }
-        
+
         return {
             url: image.imageUrl,
             filename: image.originalFilename,
@@ -168,5 +169,24 @@ export class ImageService {
         catch (error) {
             throw new BadRequestException('Failed to delete file');
         }
+    }
+
+    async addFeedback(
+        fileId: string,
+        dto: AddFeedbackDto,
+    ): Promise<ImageResponseDto> {
+        const image = await this.imageModel.findById(fileId).exec();
+        if (!image) {
+            throw new BadRequestException('File not found');
+        }
+
+        image.feedback = dto.feedback;
+        await image.save();
+
+        return {
+            url: image.imageUrl,
+            filename: image.originalFilename,
+            mimetype: image.mimetype,
+        };
     }
 }
