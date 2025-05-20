@@ -79,6 +79,7 @@ export class UserService {
                 .find(query)
                 .skip(skip)
                 .limit(filter.limit)
+                .sort({ createdAt: -1 })
                 .exec(),
             this.userModel.countDocuments(query).exec(),
         ]);

@@ -72,6 +72,7 @@ export class ImageService {
                 .populate('userId')
                 .skip(skip)
                 .limit(filter.limit)
+                .sort({ createdAt: -1 })
                 .exec(),
             this.imageModel.countDocuments(query).exec(),
         ]);
