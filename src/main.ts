@@ -24,7 +24,11 @@ async function bootstrap() {
 
   // Serve static files
   const uploadDir = configService.get<string>('UPLOAD_DIR') || 'uploads';
-  app.useStaticAssets(join(__dirname, '..', uploadDir), {
+  const staticPath = environment === 'production' 
+    ? join(__dirname, '../../../', uploadDir)
+    : join(__dirname, '..', uploadDir);
+
+  app.useStaticAssets(staticPath, {
     prefix: '/uploads/',
   });
 
