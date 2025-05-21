@@ -135,8 +135,8 @@ export class ImageService {
         };
     }
 
-    async fetchImage(experimentId: string): Promise<ImageResponseDto> {
-        const image = await this.imageModel.findOne({ experimentId }).exec();
+    async fetchImage(experimentId: string, studentId: string): Promise<ImageResponseDto> {
+        const image = await this.imageModel.findOne({ experimentId, userId: studentId }).exec();
         if (!image) {
             throw new BadRequestException('Image not found');
         }
@@ -148,7 +148,31 @@ export class ImageService {
         };
     }
 
-    async deleteImage(fileId: string): Promise<void> {
+    async deleteImage(fileId: string, studentId: string): Promise<void> {
+
+        const image = await this.imageModel.findById(fileId, { userId: studentId }).exec();
+        if (!image) {
+            throw new BadRequestException('File not found');
+        }
+        const filename = image.originalFilename;
+
+        const filePath = `${this.configService.get<string>('UPLOAD_DIR')}/${filename}`;
+        try {
+            await fs.promises.access(filePath, fs.constants.F_OK);
+        }
+        catch (error) {
+            throw new BadRequestException('File not found');
+        }
+        try {
+            await fs.promises.unlink(filePath);
+            await this.imageModel.deleteOne({ _id: fileId }).exec();
+        }
+        catch (error) {
+            throw new BadRequestException('Failed to delete file');
+        }
+    }
+
+    async deleteImageByAdmin(fileId: string): Promise<void> {
 
         const image = await this.imageModel.findById(fileId).exec();
         if (!image) {

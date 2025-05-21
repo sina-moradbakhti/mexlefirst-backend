@@ -61,8 +61,12 @@ export class ImageController {
     @ApiResponse({ status: 403, description: 'Forbidden - User is not a student' })
     @Delete(':imageId')
     @HttpCode(HttpStatus.NO_CONTENT)
-    async deleteImage(@Param('imageId') imageId: string): Promise<void> {
-        await this.imageService.deleteImage(imageId);
+    async deleteImage(
+        @Request() req,
+        @Param('imageId') imageId: string,
+    ): Promise<void> {
+        const studentId = req.user.id;
+        await this.imageService.deleteImage(imageId, studentId);
     }
 
     @Roles(UserRole.STUDENT)
@@ -71,7 +75,11 @@ export class ImageController {
     })
     @ApiResponse({ status: 403, description: 'Forbidden - User is not a student' })
     @Get(':experimentId')
-    async fetchImage(@Param('experimentId') experimentId: string): Promise<ImageResponseDto> {
-        return this.imageService.fetchImage(experimentId);
+    async fetchImage(
+        @Request() req,
+        @Param('experimentId') experimentId: string,
+    ): Promise<ImageResponseDto> {
+        const studentId = req.user.id;
+        return this.imageService.fetchImage(experimentId, studentId);
     }
 }

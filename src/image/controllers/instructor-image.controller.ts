@@ -60,7 +60,7 @@ export class InstructorImageController {
     async deleteImage(
         @Param('id') id: string,
     ) {
-        return this.imageService.deleteImage(id);
+        return this.imageService.deleteImageByAdmin(id);
     }
 
     @Post(':imageId/feedback')
