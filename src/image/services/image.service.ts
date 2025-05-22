@@ -25,7 +25,7 @@ export class ImageService {
 
     async findAll(filter: ImageFilterDto): Promise<PaginatedResponse<ImageDocument>> {
         const query = {};
-    
+
         if (filter.user) {
             const targetedUser = await this.userModel.find({
                 email: {
@@ -93,6 +93,15 @@ export class ImageService {
 
         if (ObjectId.isValid(uploadImageDto.experimentId) === false) {
             throw new BadRequestException('Not valid experiment id');
+        }
+
+        const experiment = await this.experimentModel.findById(uploadImageDto.experimentId);
+        if (!experiment) {
+            throw new BadRequestException('Experiment not found');
+        }
+
+        if (!experiment.status || experiment.status !== 'active') {
+            throw new BadRequestException('Experiment is not active');
         }
 
         // Verify file was actually saved
@@ -174,6 +183,14 @@ export class ImageService {
 
         if (image.processingStatus == 'accepted') {
             throw new BadRequestException('File cannot be deleted now!');
+        }
+
+        const experiment = await this.experimentModel.findById(image.experimentId).exec();
+        if (!experiment) {
+            throw new BadRequestException('Experiment not found');
+        }
+        if (!experiment.status || experiment.status !== 'active') {
+            throw new BadRequestException('Experiment is not active');
         }
 
         const filename = image.originalFilename;
