@@ -9,4 +9,8 @@ export class ImageFilterDto extends PartialType(FilterDto) {
     @ApiPropertyOptional()
     @IsOptional()
     userId?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    user?: string;
 }

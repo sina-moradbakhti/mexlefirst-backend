@@ -22,6 +22,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/shared/enums/user.enum';
 import { UploadImageDto } from '../dtos/upload-image.dto';
+import { ImagesResponseDto } from 'src/shared/dtos/images-uploaded.dto';
 
 @ApiTags('Image')
 @Controller('images')
@@ -64,22 +65,22 @@ export class ImageController {
     async deleteImage(
         @Request() req,
         @Param('imageId') imageId: string,
-    ): Promise<void> {
+    ): Promise<any> {
         const studentId = req.user.id;
-        await this.imageService.deleteImage(imageId, studentId);
+        return await this.imageService.deleteImage(imageId, studentId);
     }
 
     @Roles(UserRole.STUDENT)
     @ApiOperation({
-        summary: 'Fetch Image by experimentId [Student Only]',
+        summary: 'Fetch Images by experimentId [Student Only]',
     })
     @ApiResponse({ status: 403, description: 'Forbidden - User is not a student' })
     @Get(':experimentId')
     async fetchImage(
         @Request() req,
         @Param('experimentId') experimentId: string,
-    ): Promise<ImageResponseDto> {
+    ): Promise<ImagesResponseDto> {
         const studentId = req.user.id;
-        return this.imageService.fetchImage(experimentId, studentId);
+        return this.imageService.fetchImages(experimentId, studentId);
     }
 }

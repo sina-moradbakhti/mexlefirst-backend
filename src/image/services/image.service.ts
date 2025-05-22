@@ -12,6 +12,7 @@ import { PaginatedResponse } from 'src/shared/dto/filter.dto';
 import { Experiment, ExperimentDocument } from 'src/experiment/schemas/experiment.schema';
 import { User, UserDocument } from 'src/user/schemas/user.schema';
 import { AddFeedbackDto } from '../dtos/add-feedback.dto';
+import { ImagesResponseDto } from 'src/shared/dtos/images-uploaded.dto';
 
 @Injectable()
 export class ImageService {
@@ -24,23 +25,19 @@ export class ImageService {
 
     async findAll(filter: ImageFilterDto): Promise<PaginatedResponse<ImageDocument>> {
         const query = {};
-
-        if (filter.userId) {
-            const user = await this.userModel.findOne({
-                email: filter.userId,
+    
+        if (filter.user) {
+            const targetedUser = await this.userModel.find({
+                email: {
+                    $regex: filter.user,
+                    $options: 'i',
+                },
                 role: 'student',
-            })
-                .exec();
+            }).exec();
 
-            if (user) {
-                query['userId'] = user._id;
-            } else {
-                return {
-                    data: [],
-                    total: 0,
-                    page: filter.page,
-                    limit: filter.limit,
-                    pages: 0,
+            if (targetedUser) {
+                query['userId'] = {
+                    $in: targetedUser.map(user => user._id),
                 };
             }
         }
@@ -113,6 +110,7 @@ export class ImageService {
             experimentId: uploadImageDto.experimentId,
             userId: uploadImageDto.studentId,
             imageUrl: filePath,
+            description: uploadImageDto.description || '',
         });
 
         const result = await image.save();
@@ -129,46 +127,67 @@ export class ImageService {
         }
 
         return {
+            id: result._id.toString(),
+            description: result.description,
+            feedback: result.feedback,
+            processingStatus: result.processingStatus,
             url: result.imageUrl,
             filename: result.originalFilename,
             mimetype: result.mimetype,
         };
     }
 
-    async fetchImage(experimentId: string, studentId: string): Promise<ImageResponseDto> {
-        const image = await this.imageModel.findOne({ experimentId, userId: studentId }).exec();
+    async fetchImages(experimentId: string, studentId: string): Promise<ImagesResponseDto> {
+        const image = await this.imageModel.
+            find({ experimentId, userId: studentId })
+            .sort({ createdAt: -1 })
+            .exec();
+
         if (!image) {
             throw new BadRequestException('Image not found');
         }
 
+        const images = image.map((img) => ({
+            id: img._id.toString(),
+            url: img.imageUrl,
+            filename: img.originalFilename,
+            mimetype: img.mimetype,
+            description: img.description,
+            feedback: img.feedback,
+            processingStatus: img.processingStatus,
+        }));
+
         return {
-            url: image.imageUrl,
-            filename: image.originalFilename,
-            mimetype: image.mimetype,
+            images: images,
         };
     }
 
-    async deleteImage(fileId: string, studentId: string): Promise<void> {
+    async deleteImage(fileId: string, studentId: string): Promise<any> {
 
-        const image = await this.imageModel.findById(fileId, { userId: studentId }).exec();
+        const image = await this.imageModel
+            .findById(fileId, { userId: studentId })
+            .select('originalFilename processingStatus')
+            .exec();
         if (!image) {
             throw new BadRequestException('File not found');
         }
+
+        if (image.processingStatus == 'accepted') {
+            throw new BadRequestException('File cannot be deleted now!');
+        }
+
         const filename = image.originalFilename;
 
         const filePath = `${this.configService.get<string>('UPLOAD_DIR')}/${filename}`;
+
         try {
             await fs.promises.access(filePath, fs.constants.F_OK);
+            await fs.promises.unlink(filePath);
+
+            return await this.imageModel.deleteOne({ _id: fileId }).exec();
         }
         catch (error) {
             throw new BadRequestException('File not found');
-        }
-        try {
-            await fs.promises.unlink(filePath);
-            await this.imageModel.deleteOne({ _id: fileId }).exec();
-        }
-        catch (error) {
-            throw new BadRequestException('Failed to delete file');
         }
     }
 
@@ -206,12 +225,17 @@ export class ImageService {
         }
 
         image.feedback = dto.feedback;
+        image.processingStatus = 'accepted';
         await image.save();
 
         return {
+            id: image._id.toString(),
             url: image.imageUrl,
             filename: image.originalFilename,
             mimetype: image.mimetype,
+            description: image.description,
+            feedback: image.feedback,
+            processingStatus: image.processingStatus,
         };
     }
 }

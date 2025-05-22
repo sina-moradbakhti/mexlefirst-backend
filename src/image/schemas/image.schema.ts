@@ -28,6 +28,9 @@ export class Image {
   @Prop({ default: '' })
   feedback: string;
 
+  @Prop({ default: '' })
+  description: string;
+
   @Prop({ type: [Object], default: [] })
   detectedComponents: Record<string, any>[];
 }
