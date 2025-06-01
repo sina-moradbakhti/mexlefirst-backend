@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Authentication Test</title>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Authentication Test</h1>
+        
+        <div class="card">
+            <h2>Connection Settings</h2>
+            <div class="form-group">
+                <label for="serverUrl">Server URL:</label>
+                <input type="text" id="serverUrl" value="http://localhost:3000/image-processing" />
+            </div>
+            <div class="form-group">
+                <label for="token">JWT Token:</label>
+                <input type="text" id="token" placeholder="Paste your JWT token here" />
+            </div>
+            <div class="form-group">
+                <button id="connectBtn">Connect</button>
+                <button id="disconnectBtn" disabled>Disconnect</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Image Upload</h2>
+            <div class="form-group">
+                <label for="imageEndpoint">Image Upload Endpoint:</label>
+                <input type="text" id="imageEndpoint" value="http://localhost:3000/images/upload" />
+            </div>
+            <div class="form-group">
+                <label for="imageFile">Select Image:</label>
+                <input type="file" id="imageFile" accept="image/*" />
+            </div>
+            <div class="form-group">
+                <label for="experimentId">Experiment ID:</label>
+                <input type="text" id="experimentId" placeholder="Enter experiment ID" />
+            </div>
+            <div class="form-group">
+                <button id="uploadBtn" disabled>Upload Image</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Log</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        
+        // DOM elements
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const logElement = document.getElementById('log');
+        
+        // Log function
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        // Connect to WebSocket
+        connectBtn.addEventListener('click', () => {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const token = document.getElementById('token').value;
+            
+            if (!token) {
+                log('Please provide a JWT token', 'error');
+                return;
+            }
+            
+            try {
+                log(`Connecting to ${serverUrl}...`);
+                
+                // Initialize Socket.IO with auth
+                socket = io(serverUrl, {
+                    auth: {
+                        token: token
+                    },
+                    transports: ['websocket']
+                });
+                
+                // Connection events
+                socket.on('connect', () => {
+                    log(`Connected with socket ID: ${socket.id}`, 'success');
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    uploadBtn.disabled = false;
+                });
+                
+                socket.on('connect_error', (error) => {
+                    log(`Connection error: ${error.message}`, 'error');
+                });
+                
+                socket.on('disconnect', (reason) => {
+                    log(`Disconnected: ${reason}`);
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    uploadBtn.disabled = true;
+                });
+                
+                // Processing events
+                socket.on('processing-update', (data) => {
+                    log(`Processing update: ${JSON.stringify(data)}`, 'info');
+                });
+                
+                socket.on('processing-complete', (data) => {
+                    log(`Processing complete: ${JSON.stringify(data)}`, 'success');
+                });
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Disconnect from WebSocket
+        disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                socket.disconnect();
+                log('Manually disconnected');
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                uploadBtn.disabled = true;
+            }
+        });
+        
+        // Upload image
+        uploadBtn.addEventListener('click', async () => {
+            const imageEndpoint = document.getElementById('imageEndpoint').value;
+            const fileInput = document.getElementById('imageFile');
+            const experimentId = document.getElementById('experimentId').value;
+            const token = document.getElementById('token').value;
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                log('Please select an image file', 'error');
+                return;
+            }
+            
+            if (!experimentId) {
+                log('Please enter an experiment ID', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('experimentId', experimentId);
+            
+            try {
+                log('Uploading image...');
+                
+                const response = await fetch(imageEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                log(`Upload successful! Image ID: ${result.id}`, 'success');
+                log('Waiting for processing updates via WebSocket...');
+                
+            } catch (error) {
+                log(`Upload error: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

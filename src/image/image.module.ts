@@ -14,6 +14,8 @@ import { User, UserSchema } from 'src/user/schemas/user.schema';
 import { MatrixCodeDetectorService } from './services/matrix-code-detector.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { ImageProcessingGateway } from './gateways/image-processing.gateway';
+import { JwtModule } from '@nestjs/jwt';
+import { UserService } from 'src/user/user.service';
 
 @Module({
     imports: [
@@ -22,6 +24,16 @@ import { ImageProcessingGateway } from './gateways/image-processing.gateway';
             { name: User.name, schema: UserSchema },
             { name: Experiment.name, schema: ExperimentSchema },
         ]),
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: async (configService: ConfigService) => ({
+                secret: configService.get<string>('JWT_SECRET'),
+                signOptions: {
+                    expiresIn: configService.get<string>('JWT_EXPIRATION', '1d'),
+                },
+            }),
+        }),
         MulterModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
@@ -71,6 +83,7 @@ import { ImageProcessingGateway } from './gateways/image-processing.gateway';
         MatrixCodeDetectorService,
         ImageProcessingService,
         ImageProcessingGateway,
+        UserService,
     ],
     exports: [ImageService, ImageProcessingService],
 })

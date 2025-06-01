@@ -5,7 +5,9 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { UserService } from '../../user/user.service';
 
 @Injectable()
 @WebSocketGateway({
@@ -21,26 +23,99 @@ export class ImageProcessingGateway implements OnGatewayConnection, OnGatewayDis
   private readonly logger = new Logger(ImageProcessingGateway.name);
   private connectedClients = new Map<string, Socket>();
 
-  handleConnection(client: Socket) {
-    this.logger.log(`Client connected: ${client.id}`);
+  constructor(
+    private jwtService: JwtService,
+    private userService: UserService,
+  ) {}
+
+  async handleConnection(client: Socket) {
+    this.logger.log(`Client attempting to connect: ${client.id}`);
     
-    // Store client with user ID if provided
-    const userId = client.handshake.query.userId as string;
-    if (userId) {
+    try {
+      // Extract token from handshake auth or headers
+      const token = this.extractToken(client);
+      
+      if (!token) {
+        this.logger.warn(`Client ${client.id} connection rejected: No authorization token provided`);
+        client.disconnect(true);
+        return;
+      }
+      
+      // Verify and decode the token
+      const payload = await this.jwtService.verifyAsync(token);
+      
+      if (!payload || !payload.id) {
+        this.logger.warn(`Client ${client.id} connection rejected: Invalid token payload`);
+        client.disconnect(true);
+        return;
+      }
+      
+      // Verify user exists
+      const user = await this.userService.findById(payload.id);
+      if (!user) {
+        this.logger.warn(`Client ${client.id} connection rejected: User not found`);
+        client.disconnect(true);
+        return;
+      }
+      
+      // Store client with user ID
+      const userId = payload.id;
       this.connectedClients.set(userId, client);
-      this.logger.log(`User ${userId} connected with socket ${client.id}`);
+      
+      // Store user data in socket for later use
+      client.data.user = {
+        id: userId,
+        email: payload.email,
+        role: payload.role
+      };
+      
+      this.logger.log(`User ${userId} (${payload.email}) authenticated and connected with socket ${client.id}`);
+    } catch (error) {
+      this.logger.error(`Authentication error for client ${client.id}:`, error.message);
+      client.disconnect(true);
     }
+  }
+  
+  private extractToken(client: Socket): string | null {
+    // Try to get token from handshake auth
+    if (client.handshake.auth && client.handshake.auth.token) {
+      return client.handshake.auth.token;
+    }
+    
+    // Try to get token from headers (Authorization: Bearer token)
+    if (client.handshake.headers.authorization) {
+      const authHeader = client.handshake.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        return authHeader.substring(7);
+      }
+    }
+    
+    // Try to get token from query parameter
+    if (client.handshake.query && client.handshake.query.token) {
+      return client.handshake.query.token as string;
+    }
+    
+    return null;
   }
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     
-    // Remove client from connected clients
-    for (const [userId, socket] of this.connectedClients.entries()) {
-      if (socket.id === client.id) {
+    // If we have user data stored in the socket, use it for a more efficient lookup
+    if (client.data && client.data.user && client.data.user.id) {
+      const userId = client.data.user.id;
+      if (this.connectedClients.has(userId)) {
         this.connectedClients.delete(userId);
-        this.logger.log(`User ${userId} disconnected`);
-        break;
+        this.logger.log(`User ${userId} (${client.data.user.email}) disconnected`);
+      }
+    } else {
+      // Fallback to the previous method if no user data is available
+      for (const [userId, socket] of this.connectedClients.entries()) {
+        if (socket.id === client.id) {
+          this.connectedClients.delete(userId);
+          this.logger.log(`User ${userId} disconnected`);
+          break;
+        }
       }
     }
   }
