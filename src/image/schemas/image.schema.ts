@@ -33,6 +33,15 @@ export class Image {
 
   @Prop({ type: [Object], default: [] })
   detectedComponents: Record<string, any>[];
+
+  @Prop()
+  processedImageUrl: string;
+
+  @Prop()
+  reportByBot: string;
+
+  @Prop()
+  reportedPhoto: string;
 }
 
 export const ImageSchema = SchemaFactory.createForClass(Image);

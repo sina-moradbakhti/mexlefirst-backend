@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Code Processing Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .status.processing {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+        .status.completed {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .status.failed {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Matrix Code Processing Test</h1>
+    
+    <div>
+        <h3>WebSocket Connection</h3>
+        <div>
+            <label>User ID: </label>
+            <input type="text" id="userId" placeholder="Enter user ID" value="test-user-123">
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+        </div>
+        <div id="connectionStatus" class="status">Not connected</div>
+    </div>
+
+    <div>
+        <h3>Test Processing Updates</h3>
+        <button onclick="simulateProcessingUpdate()">Simulate Processing Update</button>
+        <button onclick="simulateProcessingComplete()">Simulate Processing Complete</button>
+    </div>
+
+    <div>
+        <h3>Event Log</h3>
+        <div id="eventLog" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let socket = null;
+        let userId = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateConnectionStatus(status, className) {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = status;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function connect() {
+            userId = document.getElementById('userId').value;
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+
+            if (socket) {
+                socket.disconnect();
+            }
+
+            // Connect to the image processing namespace
+            socket = io('http://localhost:3000/image-processing', {
+                query: {
+                    userId: userId
+                }
+            });
+
+            socket.on('connect', () => {
+                log(`Connected to WebSocket with socket ID: ${socket.id}`, 'success');
+                updateConnectionStatus(`Connected as ${userId}`, 'completed');
+            });
+
+            socket.on('disconnect', () => {
+                log('Disconnected from WebSocket', 'error');
+                updateConnectionStatus('Disconnected', 'failed');
+            });
+
+            socket.on('processing-update', (data) => {
+                log(`Processing Update: ${JSON.stringify(data)}`, 'info');
+            });
+
+            socket.on('processing-complete', (data) => {
+                log(`Processing Complete: ${JSON.stringify(data)}`, 'success');
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`Connection Error: ${error.message}`, 'error');
+                updateConnectionStatus('Connection Failed', 'failed');
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateConnectionStatus('Disconnected', 'failed');
+                log('Manually disconnected', 'info');
+            }
+        }
+
+        function simulateProcessingUpdate() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first');
+                return;
+            }
+            
+            // This would normally come from the server
+            const mockData = {
+                imageId: 'test-image-123',
+                status: 'processing',
+                message: 'Bot: Starting Matrix code analysis...'
+            };
+            
+            socket.emit('processing-update', mockData);
+            log('Sent processing update simulation', 'info');
+        }
+
+        function simulateProcessingComplete() {
+            if (!socket || !socket.connected) {
+                alert('Please connect first');
+                return;
+            }
+            
+            // This would normally come from the server
+            const mockData = {
+                imageId: 'test-image-123',
+                status: 'completed',
+                message: 'Bot: All 3 components are readable! Please wait for the final report...',
+                totalCodes: 3,
+                readableCodes: 3,
+                unreadableCodes: 0
+            };
+            
+            socket.emit('processing-complete', mockData);
+            log('Sent processing complete simulation', 'success');
+        }
+
+        function clearLog() {
+            document.getElementById('eventLog').innerHTML = '';
+        }
+
+        // Auto-connect on page load for testing
+        window.onload = function() {
+            log('Page loaded. Click Connect to start WebSocket connection.', 'info');
+        };
+    </script>
+</body>
+</html>
