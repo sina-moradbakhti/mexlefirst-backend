@@ -11,6 +11,9 @@ import { extname } from 'path';
 import { InstructorImageController } from './controllers/instructor-image.controller';
 import { Experiment, ExperimentSchema } from 'src/experiment/schemas/experiment.schema';
 import { User, UserSchema } from 'src/user/schemas/user.schema';
+import { MatrixCodeDetectorService } from './services/matrix-code-detector.service';
+import { ImageProcessingService } from './services/image-processing.service';
+import { ImageProcessingGateway } from './gateways/image-processing.gateway';
 
 @Module({
     imports: [
@@ -63,7 +66,12 @@ import { User, UserSchema } from 'src/user/schemas/user.schema';
         ImageController,
         InstructorImageController,
     ],
-    providers: [ImageService],
-    exports: [ImageService],
+    providers: [
+        ImageService,
+        MatrixCodeDetectorService,
+        ImageProcessingService,
+        ImageProcessingGateway,
+    ],
+    exports: [ImageService, ImageProcessingService],
 })
 export class ImageModule { }

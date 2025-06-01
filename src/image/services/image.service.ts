@@ -13,6 +13,7 @@ import { Experiment, ExperimentDocument } from 'src/experiment/schemas/experimen
 import { User, UserDocument } from 'src/user/schemas/user.schema';
 import { AddFeedbackDto } from '../dtos/add-feedback.dto';
 import { ImagesResponseDto } from 'src/shared/dtos/images-uploaded.dto';
+import { ImageProcessingService } from './image-processing.service';
 
 @Injectable()
 export class ImageService {
@@ -21,6 +22,7 @@ export class ImageService {
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(Experiment.name) private experimentModel: Model<ExperimentDocument>,
         private configService: ConfigService,
+        private imageProcessingService: ImageProcessingService,
     ) { }
 
     async findAll(filter: ImageFilterDto): Promise<PaginatedResponse<ImageDocument>> {
@@ -134,6 +136,11 @@ export class ImageService {
             }
             throw new BadRequestException('Failed to store image metadata');
         }
+
+        // Queue the image for Matrix code processing
+        this.imageProcessingService.queueImageProcessing(result._id.toString()).catch(error => {
+            console.error('Failed to queue image processing:', error);
+        });
 
         return {
             id: result._id.toString(),

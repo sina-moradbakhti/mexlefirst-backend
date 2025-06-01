@@ -23,13 +23,17 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/shared/enums/user.enum';
 import { UploadImageDto } from '../dtos/upload-image.dto';
 import { ImagesResponseDto } from 'src/shared/dtos/images-uploaded.dto';
+import { ImageProcessingService } from '../services/image-processing.service';
 
 @ApiTags('Image')
 @Controller('images')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class ImageController {
-    constructor(private readonly imageService: ImageService) { }
+    constructor(
+        private readonly imageService: ImageService,
+        private readonly imageProcessingService: ImageProcessingService,
+    ) { }
 
     @Roles(UserRole.STUDENT)
     @ApiOperation({
@@ -82,5 +86,32 @@ export class ImageController {
     ): Promise<ImagesResponseDto> {
         const studentId = req.user.id;
         return this.imageService.fetchImages(experimentId, studentId);
+    }
+
+    @Roles(UserRole.STUDENT)
+    @ApiOperation({
+        summary: 'Get Processing Status [Student Only]',
+    })
+    @ApiResponse({ status: 200, description: 'Processing status retrieved' })
+    @ApiResponse({ status: 404, description: 'Image not found' })
+    @Get('processing-status/:imageId')
+    async getProcessingStatus(
+        @Param('imageId') imageId: string,
+    ): Promise<any> {
+        return this.imageProcessingService.getProcessingStatus(imageId);
+    }
+
+    @Roles(UserRole.STUDENT)
+    @ApiOperation({
+        summary: 'Reprocess Image [Student Only]',
+    })
+    @ApiResponse({ status: 200, description: 'Image reprocessing started' })
+    @ApiResponse({ status: 404, description: 'Image not found' })
+    @Post('reprocess/:imageId')
+    async reprocessImage(
+        @Param('imageId') imageId: string,
+    ): Promise<{ message: string }> {
+        await this.imageProcessingService.reprocessImage(imageId);
+        return { message: 'Image reprocessing started' };
     }
 }
