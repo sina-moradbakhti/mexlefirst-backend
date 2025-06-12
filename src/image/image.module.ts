@@ -16,6 +16,7 @@ import { ImageProcessingService } from './services/image-processing.service';
 import { ImageProcessingGateway } from './gateways/image-processing.gateway';
 import { JwtModule } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
+import { ConversationModule } from '../conversation/conversation.module';
 
 @Module({
     imports: [
@@ -73,6 +74,7 @@ import { UserService } from 'src/user/user.service';
                 },
             })
         }),
+        ConversationModule,
     ],
     controllers: [
         ImageController,

@@ -137,7 +137,7 @@ export class ImageService {
             throw new BadRequestException('Failed to store image metadata');
         }
 
-        // Queue the image for Matrix code processing
+        // Queue the image for Matrix code processing (now includes conversation integration)
         this.imageProcessingService.queueImageProcessing(result._id.toString()).catch(error => {
             console.error('Failed to queue image processing:', error);
         });

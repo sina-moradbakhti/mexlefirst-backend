@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
 import { ExperimentModule } from './experiment/experiment.module';
 import { ImageModule } from './image/image.module';
+import { ConversationModule } from './conversation/conversation.module';
 
 
 @Module({
@@ -37,6 +38,7 @@ import { ImageModule } from './image/image.module';
     UserModule,
     ExperimentModule,
     ImageModule,
+    ConversationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversation System Test</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 80vh;
+        }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .auth-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #fafafa;
+            border-radius: 5px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .message.bot {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        .message.user {
+            background: #e8f5e8;
+            border-left: 4px solid #4caf50;
+            margin-left: auto;
+        }
+        .message.system {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            text-align: center;
+        }
+        .message-header {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        input, textarea, button, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        input, textarea, select {
+            flex: 1;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            min-width: 80px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .conversation-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .conversation-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .conversation-item:hover {
+            background: #f5f5f5;
+        }
+        .conversation-item.active {
+            background: #e3f2fd;
+        }
+        h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .metadata {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗨️ Conversation System Test</h1>
+    
+    <div class="container">
+        <!-- Left Panel: Connection & API Testing -->
+        <div class="panel">
+            <h3>Connection & API Testing</h3>
+            
+            <div class="auth-section">
+                <h4>Authentication</h4>
+                <div class="input-group">
+                    <input type="text" id="token" placeholder="JWT Token" />
+                    <button onclick="connect()">Connect</button>
+                </div>
+                <div id="connectionStatus" class="status disconnected">Disconnected</div>
+            </div>
+
+            <div class="auth-section">
+                <h4>Create Conversation</h4>
+                <div class="input-group">
+                    <input type="text" id="experimentId" placeholder="Experiment ID" />
+                    <input type="text" id="initialMessage" placeholder="Initial Message (optional)" />
+                </div>
+                <button onclick="createConversation()">Create Conversation</button>
+                <small>Note: Instructor ID and title are automatically derived from experiment data</small>
+            </div>
+
+            <div class="auth-section">
+                <h4>Load Conversations</h4>
+                <div class="input-group">
+                    <select id="userType">
+                        <option value="student">Student</option>
+                        <option value="instructor">Instructor</option>
+                    </select>
+                    <input type="text" id="userId" placeholder="User ID" />
+                    <button onclick="loadConversations()">Load</button>
+                </div>
+                <div class="conversation-list" id="conversationList"></div>
+            </div>
+
+            <div id="apiMessages" class="messages" style="height: 200px;"></div>
+        </div>
+
+        <!-- Right Panel: Real-time Chat -->
+        <div class="panel">
+            <h3>Real-time Chat</h3>
+            
+            <div class="auth-section">
+                <h4>Current Conversation</h4>
+                <div class="input-group">
+                    <input type="text" id="currentConversationId" placeholder="Conversation ID" readonly />
+                    <button onclick="joinConversation()">Join</button>
+                    <button onclick="leaveConversation()">Leave</button>
+                </div>
+            </div>
+
+            <div id="chatMessages" class="messages"></div>
+            
+            <div class="input-group">
+                <textarea id="messageInput" placeholder="Type your message..." rows="2"></textarea>
+                <button onclick="sendMessage()">Send</button>
+            </div>
+            
+            <div class="input-group">
+                <button onclick="markAsRead()">Mark as Read</button>
+                <button onclick="simulateBotMessage()">Simulate Bot Message</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let currentConversationId = null;
+        let authToken = null;
+
+        function connect() {
+            const token = document.getElementById('token').value;
+            if (!token) {
+                alert('Please enter a JWT token');
+                return;
+            }
+
+            authToken = token;
+            
+            socket = io('http://localhost:3000/conversations', {
+                auth: {
+                    token: token
+                }
+            });
+
+            socket.on('connect', () => {
+                updateConnectionStatus(true);
+                addApiMessage('Connected to conversation namespace', 'system');
+            });
+
+            socket.on('disconnect', () => {
+                updateConnectionStatus(false);
+                addApiMessage('Disconnected from conversation namespace', 'system');
+            });
+
+            socket.on('connected', (data) => {
+                addApiMessage(`Server: ${data.message}`, 'system');
+            });
+
+            socket.on('error', (data) => {
+                addApiMessage(`Error: ${data.message}`, 'system');
+            });
+
+            socket.on('joined-conversation', (data) => {
+                addApiMessage(`Joined conversation: ${data.conversationId}`, 'system');
+                currentConversationId = data.conversationId;
+                document.getElementById('currentConversationId').value = currentConversationId;
+            });
+
+            socket.on('left-conversation', (data) => {
+                addApiMessage(`Left conversation: ${data.conversationId}`, 'system');
+            });
+
+            socket.on('new-message', (data) => {
+                addChatMessage(data.message);
+            });
+
+            socket.on('bot-message-received', (data) => {
+                addChatMessage(data.message);
+            });
+
+            socket.on('message-received', (data) => {
+                addApiMessage(`New message received in conversation ${data.conversationId}`, 'system');
+            });
+
+            socket.on('messages-read', (data) => {
+                addApiMessage(`Messages marked as read by ${data.readBy}`, 'system');
+            });
+
+            socket.on('marked-as-read', (data) => {
+                addApiMessage(`Messages marked as read in ${data.conversationId}`, 'system');
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = connected ? 'Connected' : 'Disconnected';
+            statusEl.className = `status ${connected ? 'connected' : 'disconnected'}`;
+        }
+
+        function addApiMessage(message, type = 'system') {
+            const messagesEl = document.getElementById('apiMessages');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${type}`;
+            messageEl.innerHTML = `
+                <div class="message-header">${new Date().toLocaleTimeString()}</div>
+                <div>${message}</div>
+            `;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function addChatMessage(message) {
+            const messagesEl = document.getElementById('chatMessages');
+            const messageEl = document.createElement('div');
+            
+            let senderType = 'user';
+            if (message.senderType === 'bot') senderType = 'bot';
+            else if (message.messageType === 'system') senderType = 'system';
+            
+            messageEl.className = `message ${senderType}`;
+            messageEl.innerHTML = `
+                <div class="message-header">
+                    ${message.senderType} - ${new Date(message.sentAt).toLocaleTimeString()}
+                </div>
+                <div>${message.content}</div>
+                ${message.metadata ? `<div class="metadata">Metadata: ${JSON.stringify(message.metadata)}</div>` : ''}
+            `;
+            messagesEl.appendChild(messageEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        async function createConversation() {
+            const experimentId = document.getElementById('experimentId').value;
+            const initialMessage = document.getElementById('initialMessage').value;
+
+            if (!experimentId) {
+                alert('Please enter an experiment ID');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/conversations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        experimentId,
+                        initialMessage: initialMessage || undefined
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    addApiMessage(`Conversation created: ${data._id}`, 'system');
+                    addApiMessage(`Title: ${data.title}`, 'system');
+                    addApiMessage(`Instructor ID: ${data.instructorId}`, 'system');
+                    document.getElementById('currentConversationId').value = data._id;
+                } else {
+                    addApiMessage(`Error creating conversation: ${data.message}`, 'system');
+                }
+            } catch (error) {
+                addApiMessage(`Error: ${error.message}`, 'system');
+            }
+        }
+
+        async function loadConversations() {
+            const userType = document.getElementById('userType').value;
+            const userId = document.getElementById('userId').value;
+
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:3000/conversations/${userType}/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayConversations(data.conversations);
+                } else {
+                    addApiMessage(`Error loading conversations: ${data.message}`, 'system');
+                }
+            } catch (error) {
+                addApiMessage(`Error: ${error.message}`, 'system');
+            }
+        }
+
+        function displayConversations(conversations) {
+            const listEl = document.getElementById('conversationList');
+            listEl.innerHTML = '';
+
+            conversations.forEach(conv => {
+                const item = document.createElement('div');
+                item.className = 'conversation-item';
+                item.innerHTML = `
+                    <strong>${conv.title}</strong><br>
+                    <small>ID: ${conv._id}</small><br>
+                    <small>Messages: ${conv.messages.length} | Unread: ${conv.unreadCount}</small>
+                `;
+                item.onclick = () => {
+                    document.getElementById('currentConversationId').value = conv._id;
+                    document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                };
+                listEl.appendChild(item);
+            });
+        }
+
+        function joinConversation() {
+            const conversationId = document.getElementById('currentConversationId').value;
+            if (!conversationId || !socket) {
+                alert('Please enter a conversation ID and connect first');
+                return;
+            }
+
+            socket.emit('join-conversation', { conversationId });
+        }
+
+        function leaveConversation() {
+            const conversationId = document.getElementById('currentConversationId').value;
+            if (!conversationId || !socket) {
+                alert('Please enter a conversation ID and connect first');
+                return;
+            }
+
+            socket.emit('leave-conversation', { conversationId });
+        }
+
+        function sendMessage() {
+            const conversationId = document.getElementById('currentConversationId').value;
+            const messageInput = document.getElementById('messageInput');
+            const content = messageInput.value.trim();
+
+            if (!conversationId || !content || !socket) {
+                alert('Please join a conversation and enter a message');
+                return;
+            }
+
+            socket.emit('send-message', {
+                conversationId,
+                message: {
+                    content,
+                    messageType: 'text'
+                }
+            });
+
+            messageInput.value = '';
+        }
+
+        function markAsRead() {
+            const conversationId = document.getElementById('currentConversationId').value;
+            if (!conversationId || !socket) {
+                alert('Please join a conversation first');
+                return;
+            }
+
+            socket.emit('mark-as-read', { conversationId });
+        }
+
+        function simulateBotMessage() {
+            const conversationId = document.getElementById('currentConversationId').value;
+            if (!conversationId) {
+                alert('Please select a conversation first');
+                return;
+            }
+
+            // This would typically be called from your image processing service
+            // For testing, we'll simulate it via the API
+            addApiMessage('Bot message simulation would be triggered by image processing', 'system');
+        }
+
+        // Allow Enter key to send messages
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

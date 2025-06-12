@@ -112,6 +112,6 @@ export class ImageController {
         @Param('imageId') imageId: string,
     ): Promise<{ message: string }> {
         await this.imageProcessingService.reprocessImage(imageId);
-        return { message: 'Image reprocessing started' };
+        return { message: 'Image reprocessing started with conversation integration' };
     }
 }
