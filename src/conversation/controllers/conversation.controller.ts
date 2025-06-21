@@ -148,6 +148,24 @@ export class ConversationController {
     );
   }
 
+  @Get('experiment/:experimentId')
+  @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get the conversation for a specific experiment' })
+  @ApiParam({ name: 'experimentId', description: 'Experiment ID' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Conversation retrieved successfully',
+    type: ConversationResponseDto,
+  })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Conversation not found for this experiment' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Not authorized to view this conversation' })
+  async getConversationByExperiment(
+    @Param('experimentId') experimentId: string,
+    @Request() req: any,
+  ): Promise<ConversationResponseDto> {
+    return this.conversationService.getConversationByExperiment(experimentId, req.user.id, req.user.role);
+  }
+
   @Get(':id')
   @Roles(UserRole.STUDENT, UserRole.INSTRUCTOR, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get a specific conversation by ID' })

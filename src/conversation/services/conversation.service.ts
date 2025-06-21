@@ -174,7 +174,7 @@ export class ConversationService {
     const [conversations, total] = await Promise.all([
       this.conversationModel
         .find(filter)
-        .sort({ lastMessageAt: -1 })
+        .sort({ lastMessageAt: 1 })
         .skip(skip)
         .limit(limit)
         .populate('studentId', 'email')
@@ -217,7 +217,7 @@ export class ConversationService {
     const [conversations, total] = await Promise.all([
       this.conversationModel
         .find(filter)
-        .sort({ lastMessageAt: -1 })
+        .sort({ lastMessageAt: 1 })
         .skip(skip)
         .limit(limit)
         .populate('studentId', 'email')
@@ -252,7 +252,7 @@ export class ConversationService {
 
     const conversations = await this.conversationModel
       .find(filter)
-      .sort({ lastMessageAt: -1 })
+      .sort({ lastMessageAt: 1 })
       .populate('studentId', 'email')
       .populate('instructorId', 'email')
       .populate('experimentId', 'experimentId experimentType')
@@ -275,6 +275,31 @@ export class ConversationService {
 
     // Verify user has permission to view this conversation
     this.validateViewPermission(conversation, userId, userRole);
+
+    return this.transformToResponseDto(conversation);
+  }
+
+  async getConversationByExperiment(experimentId: string, userId: string, userRole: UserRole): Promise<ConversationResponseDto> {
+    let filter: any = { experimentId: new Types.ObjectId(experimentId) };
+
+    // Apply user-specific filters based on role
+    if (userRole === UserRole.STUDENT) {
+      filter.studentId = new Types.ObjectId(userId);
+    } else if (userRole === UserRole.INSTRUCTOR) {
+      filter.instructorId = new Types.ObjectId(userId);
+    }
+    // Admin can see any conversation for the experiment
+
+    const conversation = await this.conversationModel
+      .findOne(filter)
+      .populate('studentId', 'email')
+      .populate('instructorId', 'email')
+      .populate('experimentId', 'experimentId experimentType')
+      .exec();
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found for this experiment');
+    }
 
     return this.transformToResponseDto(conversation);
   }

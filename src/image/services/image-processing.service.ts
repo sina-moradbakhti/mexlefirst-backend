@@ -58,19 +58,7 @@ export class ImageProcessingService {
         image.originalFilename || 'Image Processing'
       );
 
-      // Send initial processing message via conversation
-      await this.conversationService.sendBotMessage(
-        conversation._id,
-        `🔄 Starting analysis of your submitted image: ${image.originalFilename || 'uploaded image'}`,
-        MessageType.SYSTEM,
-        {
-          imageId: imageId,
-          processingStatus: 'started',
-          imageUrl: image.imageUrl
-        }
-      );
-
-      // Also send via WebSocket for real-time updates
+      // Send initial processing message via WebSocket (which also saves to database)
       this.conversationGateway.sendBotMessage(
         conversation._id,
         `🔄 Starting analysis of your submitted image: ${image.originalFilename || 'uploaded image'}`,
@@ -123,23 +111,7 @@ export class ImageProcessingService {
         // Create detailed feedback message for conversation
         const feedbackMessage = this.createFeedbackMessage(result, image);
         
-        // Send feedback message to conversation
-        await this.conversationService.sendBotMessage(
-          conversation._id,
-          feedbackMessage,
-          MessageType.FEEDBACK,
-          {
-            imageId: imageId,
-            processingStatus: image.processingStatus,
-            totalCodes: result.totalCodes,
-            readableCodes: result.readableCodes,
-            unreadableCodes: result.unreadableCodes,
-            processedImageUrl: result.processedImagePath,
-            detectedComponents: result.detectedCodes
-          }
-        );
-
-        // Send via WebSocket
+        // Send feedback message via WebSocket (which also saves to database)
         this.conversationGateway.sendBotMessage(
           conversation._id,
           feedbackMessage,
@@ -159,17 +131,6 @@ export class ImageProcessingService {
         if (result.unreadableCodes > 0) {
           const guidanceMessage = this.createGuidanceMessage(result);
           
-          await this.conversationService.sendBotMessage(
-            conversation._id,
-            guidanceMessage,
-            MessageType.SYSTEM,
-            {
-              imageId: imageId,
-              type: 'guidance',
-              unreadableCodes: result.unreadableCodes
-            }
-          );
-
           this.conversationGateway.sendBotMessage(
             conversation._id,
             guidanceMessage,
@@ -203,18 +164,7 @@ export class ImageProcessingService {
 
         const errorMessage = `❌ **Processing Failed**\n\nI encountered an error while analyzing your image:\n\n${result.error}\n\nPlease try uploading the image again or contact your instructor for assistance.`;
 
-        // Send error message to conversation
-        await this.conversationService.sendBotMessage(
-          conversation._id,
-          errorMessage,
-          MessageType.SYSTEM,
-          {
-            imageId: imageId,
-            processingStatus: 'failed',
-            error: result.error
-          }
-        );
-
+        // Send error message via WebSocket (which also saves to database)
         this.conversationGateway.sendBotMessage(
           conversation._id,
           errorMessage,
@@ -260,18 +210,7 @@ export class ImageProcessingService {
 
           const errorMessage = `❌ **Unexpected Error**\n\nAn unexpected error occurred while processing your image. Please try again or contact your instructor.\n\nError details: ${error.message}`;
 
-          // Send error to conversation
-          await this.conversationService.sendBotMessage(
-            conversation._id,
-            errorMessage,
-            MessageType.SYSTEM,
-            {
-              imageId: imageId,
-              processingStatus: 'failed',
-              error: error.message
-            }
-          );
-
+          // Send error via WebSocket (which also saves to database)
           this.conversationGateway.sendBotMessage(
             conversation._id,
             errorMessage,
