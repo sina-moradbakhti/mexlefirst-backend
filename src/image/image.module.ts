@@ -11,7 +11,7 @@ import { extname } from 'path';
 import { InstructorImageController } from './controllers/instructor-image.controller';
 import { Experiment, ExperimentSchema } from 'src/experiment/schemas/experiment.schema';
 import { User, UserSchema } from 'src/user/schemas/user.schema';
-import { MatrixCodeDetectorService } from './services/matrix-code-detector.service';
+import { ThirdPartyDetectorService } from './services/third-party-detector.service';
 import { ImageProcessingService } from './services/image-processing.service';
 import { ImageProcessingGateway } from './gateways/image-processing.gateway';
 import { JwtModule } from '@nestjs/jwt';
@@ -82,7 +82,7 @@ import { ConversationModule } from '../conversation/conversation.module';
     ],
     providers: [
         ImageService,
-        MatrixCodeDetectorService,
+        ThirdPartyDetectorService,
         ImageProcessingService,
         ImageProcessingGateway,
         UserService,

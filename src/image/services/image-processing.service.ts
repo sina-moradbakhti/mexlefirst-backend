@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Image, ImageDocument } from '../schemas/image.schema';
-import { MatrixCodeDetectorService } from './matrix-code-detector.service';
+import { ThirdPartyDetectorService } from './third-party-detector.service';
 import { ImageProcessingGateway } from '../gateways/image-processing.gateway';
 import { ConversationService } from '../../conversation/services/conversation.service';
 import { ConversationGateway } from '../../conversation/gateways/conversation.gateway';
@@ -17,7 +17,7 @@ export class ImageProcessingService {
 
   constructor(
     @InjectModel(Image.name) private imageModel: Model<ImageDocument>,
-    private matrixCodeDetector: MatrixCodeDetectorService,
+    private thirdPartyDetector: ThirdPartyDetectorService,
     private imageProcessingGateway: ImageProcessingGateway,
     private conversationService: ConversationService,
     private conversationGateway: ConversationGateway,
@@ -75,7 +75,7 @@ export class ImageProcessingService {
       this.imageProcessingGateway.sendProcessingUpdate(userId, {
         imageId: imageId,
         status: 'processing',
-        message: 'Bot: Starting Matrix code analysis...'
+        message: 'Bot: Starting Matrix code analysis using 3rd party service...'
       });
 
       // Get the upload directory and create processed directory
@@ -89,8 +89,8 @@ export class ImageProcessingService {
         await fs.mkdir(processedDir, { recursive: true });
       }
 
-      // Process the image
-      const result = await this.matrixCodeDetector.processImage(
+      // Process the image using 3rd party service
+      const result = await this.thirdPartyDetector.processImage(
         image.imageUrl,
         processedDir
       );
