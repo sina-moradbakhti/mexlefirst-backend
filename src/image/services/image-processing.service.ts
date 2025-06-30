@@ -143,6 +143,20 @@ export class ImageProcessingService {
           );
         }
 
+        // Send circuit simulation link after processing is complete
+        const circuitMessage = this.createCircuitMessage();
+        
+        this.conversationGateway.sendBotMessage(
+          conversation._id,
+          circuitMessage,
+          MessageType.SYSTEM,
+          {
+            imageId: imageId,
+            type: 'circuit_link',
+            circuitUrl: 'https://www.falstad.com/circuit/circuitjs.html?cct=%24+1+0.000005+10.20027730826997+50+5+43%0Av+128+64+128+160+0+12+0+0+0+0.5%0As+128+160+256+160+0+1+true%0Ar+256+160+256+256+0+470%0A162+256+256+128+256+2+default-led+1+0+0+0.01%0Ag+128+256+128+256+0%0Aw+128+64+256+64+0%0Aw+256+64+256+160+0%0Aw+128+256+256+256+0'
+          }
+        );
+
         // Legacy socket notification (for backward compatibility)
         this.logger.log(`Sending completion notification to user ${userId}`);
         this.imageProcessingGateway.sendProcessingComplete(userId, {
@@ -343,6 +357,24 @@ export class ImageProcessingService {
     message += `• Try to capture the image from directly above\n`;
     message += `• Ensure the entire experimental setup is visible\n\n`;
     message += `Feel free to resubmit your image or ask your instructor for help! 🤝`;
+
+    return message;
+  }
+
+  /**
+   * Create circuit simulation message with link
+   */
+  private createCircuitMessage(): string {
+    let message = `🔌 **Circuit Simulation**\n\n`;
+    message += `Based on your circuit analysis, you can now explore and simulate your circuit design using our interactive circuit simulator.\n\n`;
+    message += `Click the link below to open the circuit simulation:\n\n`;
+    message += `🔗 [Open Circuit Simulator](https://www.falstad.com/circuit/circuitjs.html?cct=%24+1+0.000005+10.20027730826997+50+5+43%0Av+128+64+128+160+0+12+0+0+0+0.5%0As+128+160+256+160+0+1+true%0Ar+256+160+256+256+0+470%0A162+256+256+128+256+2+default-led+1+0+0+0.01%0Ag+128+256+128+256+0%0Aw+128+64+256+64+0%0Aw+256+64+256+160+0%0Aw+128+256+256+256+0)\n\n`;
+    message += `💡 **What you can do:**\n`;
+    message += `• Modify component values and see real-time effects\n`;
+    message += `• Run simulations to understand circuit behavior\n`;
+    message += `• Experiment with different configurations\n`;
+    message += `• Learn how your physical circuit translates to digital simulation\n\n`;
+    message += `Happy experimenting! 🧪⚡`;
 
     return message;
   }
