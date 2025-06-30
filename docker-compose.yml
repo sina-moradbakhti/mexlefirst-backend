@@ -22,27 +22,17 @@ services:
       - THIRD_PARTY_DETECTOR_URL=http://datamatrix-service:5001
       - NODE_ENV=production
 
-  # MongoDB Service
-  db-mongo:
-    container_name: db-mongo
-    image: mongo
-    volumes:
-      - mongo-data:/data/db
-    restart: unless-stopped
-    networks:
-      - server-network
-
-  # DataMatrix Service
+  # DataMatrix Detection Service
   datamatrix-service:
-    container_name: datamatrix-service
     build:
-      context: ../matrix-detection  # Path to your DataMatrix service
+      context: /root/matrix-detection
       dockerfile: Dockerfile
+    container_name: datamatrix-service
     ports:
       - "5001:5001"
     volumes:
-      - ./uploads:/app/uploads  # Shared uploads directory
-      - ./outputs:/app/outputs
+      - /root/matrix-detection/uploads:/app/uploads
+      - /root/matrix-detection/outputs:/app/outputs
     restart: unless-stopped
     networks:
       - server-network
@@ -55,6 +45,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MongoDB Service
+  db-mongo:
+    container_name: db-mongo
+    image: mongo
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+    networks:
+      - server-network
 
 volumes:
   mongo-data:
