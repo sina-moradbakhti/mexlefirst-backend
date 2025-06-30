@@ -282,39 +282,30 @@ export class ThirdPartyDetectorService {
 
   /**
    * Get the accessible base URL for the 3rd party service
-   * Handles different networking scenarios (Docker, local, etc.)
+   * The 3rd party service needs to access images via internal container networking
    */
   private async getAccessibleBaseUrl(): Promise<string> {
-    const configuredBaseUrl = this.configService.get<string>('BASE_URL');
-    
-    if (configuredBaseUrl) {
-      this.logger.log(`Using configured BASE_URL: ${configuredBaseUrl}`);
-      return configuredBaseUrl;
-    }
-
-    // Fallback logic for different environments
-    const port = this.configService.get<string>('PORT') || '3000';
     const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    const port = this.configService.get<string>('PORT') || '3000';
     
     if (nodeEnv === 'production') {
-      return 'https://server.mexle.org';
+      // In production, 3rd party service accesses our backend via container name
+      const internalUrl = `http://backend:${port}`;
+      this.logger.log(`Using internal container URL for 3rd party service: ${internalUrl}`);
+      return internalUrl;
+    } else {
+      // Development environment - use external URL
+      const configuredBaseUrl = this.configService.get<string>('BASE_URL');
+      if (configuredBaseUrl) {
+        this.logger.log(`Using configured BASE_URL for development: ${configuredBaseUrl}`);
+        return configuredBaseUrl;
+      }
+      
+      // Development fallback
+      const fallbackUrl = `http://host.docker.internal:${port}`;
+      this.logger.log(`Using development fallback URL: ${fallbackUrl}`);
+      return fallbackUrl;
     }
-
-    // Development environment - try different networking options
-    const networkingOptions = [
-      `http://host.docker.internal:${port}`,  // Docker Desktop
-      `http://172.17.0.1:${port}`,           // Default Docker bridge
-      `http://localhost:${port}`,            // Local fallback
-    ];
-
-    this.logger.log(`No BASE_URL configured, trying networking options for development...`);
-    
-    // For now, return the first option and log it
-    // In a more sophisticated setup, you could test connectivity to each
-    const selectedUrl = networkingOptions[0];
-    this.logger.log(`Selected BASE_URL: ${selectedUrl}`);
-    
-    return selectedUrl;
   }
 
   /**
