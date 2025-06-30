@@ -13,15 +13,11 @@ services:
       - "3001:3001"
     depends_on:
       - db-mongo
+      - datamatrix-service
     networks:
       - server-network
-    # Use host networking to reach other containers on same host
-    extra_hosts:
-      - "datamatrix-service:host-gateway"
-    # Load production environment variables
     env_file:
       - .env.production
-    # Force critical environment variables
     environment:
       - THIRD_PARTY_DETECTOR_URL=http://datamatrix-service:5001
       - NODE_ENV=production
@@ -36,9 +32,33 @@ services:
     networks:
       - server-network
 
+  # DataMatrix Service
+  datamatrix-service:
+    container_name: datamatrix-service
+    build:
+      context: ../matrix-detection  # Path to your DataMatrix service
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./uploads:/app/uploads  # Shared uploads directory
+      - ./outputs:/app/outputs
+    restart: unless-stopped
+    networks:
+      - server-network
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 volumes:
   mongo-data:
 
 networks:
   server-network:
-    external: true
+    driver: bridge
