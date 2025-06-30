@@ -15,6 +15,9 @@ services:
       - db-mongo
     networks:
       - server-network
+    # Use host networking to reach other containers on same host
+    extra_hosts:
+      - "datamatrix-service:host-gateway"
 
   # MongoDB Service
   db-mongo:
