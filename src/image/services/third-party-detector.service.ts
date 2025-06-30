@@ -76,9 +76,14 @@ export class ThirdPartyDetectorService {
       
       // Convert local file path to URL
       const filename = path.basename(imagePath);
-      // Clean up upload directory path (remove ./ prefix if present)
-      const cleanUploadDir = uploadDir.replace(/^\.\//, '');
-      const imageUrl = `${baseUrl}/${cleanUploadDir}/${filename}`;
+      // Clean up upload directory path for URL generation
+      // Remove ./ prefix and /app/ prefix for production URLs
+      let cleanUploadDir = uploadDir.replace(/^\.\//, ''); // Remove ./
+      cleanUploadDir = cleanUploadDir.replace(/^\/app\//, ''); // Remove /app/ prefix
+      cleanUploadDir = cleanUploadDir.replace(/^app\//, ''); // Remove app/ prefix
+      
+      // Ensure we don't have double slashes
+      const imageUrl = `${baseUrl.replace(/\/$/, '')}/${cleanUploadDir}/${filename}`;
 
       this.logger.log(`Sending image URL to 3rd party service: ${imageUrl}`);
 
