@@ -21,6 +21,10 @@ services:
     # Load production environment variables
     env_file:
       - .env.production
+    # Force critical environment variables
+    environment:
+      - THIRD_PARTY_DETECTOR_URL=http://datamatrix-service:5001
+      - NODE_ENV=production
 
   # MongoDB Service
   db-mongo:
