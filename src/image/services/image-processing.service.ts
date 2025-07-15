@@ -153,7 +153,7 @@ export class ImageProcessingService {
           {
             imageId: imageId,
             type: 'circuit_link',
-            circuitUrl: 'https://www.falstad.com/circuit/circuitjs.html?cct=%24+1+0.000005+10.20027730826997+50+5+43%0Av+128+64+128+160+0+12+0+0+0+0.5%0As+128+160+256+160+0+1+true%0Ar+256+160+256+256+0+470%0A162+256+256+128+256+2+default-led+1+0+0+0.01%0Ag+128+256+128+256+0%0Aw+128+64+256+64+0%0Aw+256+64+256+160+0%0Aw+128+256+256+256+0'
+            circuitUrl: 'https://www.falstad.com/circuit/circuitjs.html?ctz=CQAgjCAMB0l3BWcMBMcUHYMGZIA4UA2ATmIxAUgpABZsKBTAWjDACgAncDQkPK7Hhp8qVMJDYBnEIOH9aNPCKjgQAMwCGAG0kM2Ad2695YHjIQoobAMYyh5y6d7YLtKLHhgk2aMRroiBAxMFEwQFlE2LTs5AXsXSzF3OAIEcTwEDJRsEn96CQA3BSUE4uVRWiokCpgEThiHMtKxODYAezdCYSp-UhA0ZOr+t2x2mRAulV7iftFYJAhLelGOqkmeyD6YQhRq+eHEmTZBcYAxCDn4OAuPSHEIFhAAYQ0ABw1rAEsAFw0AO2sehOwnOKhgd3AsAeEAAkn8ACYAV2svwBQKUVFBSXu4QgACUGJJPpJUYC2AALVTCUZAA'
           }
         );
 
@@ -368,7 +368,7 @@ export class ImageProcessingService {
     let message = `🔌 **Circuit Simulation**\n\n`;
     message += `Based on your circuit analysis, you can now explore and simulate your circuit design using our interactive circuit simulator.\n\n`;
     message += `Click the link below to open the circuit simulation:\n\n`;
-    message += `🔗 [Open Circuit Simulator](https://www.falstad.com/circuit/circuitjs.html?cct=%24+1+0.000005+10.20027730826997+50+5+43%0Av+128+64+128+160+0+12+0+0+0+0.5%0As+128+160+256+160+0+1+true%0Ar+256+160+256+256+0+470%0A162+256+256+128+256+2+default-led+1+0+0+0.01%0Ag+128+256+128+256+0%0Aw+128+64+256+64+0%0Aw+256+64+256+160+0%0Aw+128+256+256+256+0)\n\n`;
+    message += `🔗 [Open Circuit Simulator](https://www.falstad.com/circuit/circuitjs.html?ctz=CQAgjCAMB0l3BWcMBMcUHYMGZIA4UA2ATmIxAUgpABZsKBTAWjDACgAncDQkPK7Hhp8qVMJDYBnEIOH9aNPCKjgQAMwCGAG0kM2Ad2695YHjIQoobAMYyh5y6d7YLtKLHhgk2aMRroiBAxMFEwQFlE2LTs5AXsXSzF3OAIEcTwEDJRsEn96CQA3BSUE4uVRWiokCpgEThiHMtKxODYAezdCYSp-UhA0ZOr+t2x2mRAulV7iftFYJAhLelGOqkmeyD6YQhRq+eHEmTZBcYAxCDn4OAuPSHEIFhAAYQ0ABw1rAEsAFw0AO2sehOwnOKhgd3AsAeEAAkn8ACYAV2svwBQKUVFBSXu4QgACUGJJPpJUYC2AALVTCUZAA)\n\n`;
     message += `💡 **What you can do:**\n`;
     message += `• Modify component values and see real-time effects\n`;
     message += `• Run simulations to understand circuit behavior\n`;
