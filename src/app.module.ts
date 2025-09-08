@@ -9,6 +9,7 @@ import { UserModule } from './user/user.module';
 import { ExperimentModule } from './experiment/experiment.module';
 import { ImageModule } from './image/image.module';
 import { ConversationModule } from './conversation/conversation.module';
+import { ChallengesModule } from './challenges/challenges.module';
 
 
 @Module({
@@ -39,6 +40,7 @@ import { ConversationModule } from './conversation/conversation.module';
     ExperimentModule,
     ImageModule,
     ConversationModule,
+    ChallengesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
