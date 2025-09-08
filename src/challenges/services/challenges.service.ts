@@ -17,7 +17,7 @@ export class ChallengesService {
 
   async getChallengesWithProgress(userId: string): Promise<ChallengeResponseDto[]> {
     const challenges = await this.challengeModel.find().sort({ order: 1 }).exec();
-    const progressRecords = await this.progressModel.find({ userId }).populate('challengeId').exec();
+    const progressRecords = await this.progressModel.find({ userId }).exec();
     
     // Create a map of challenge progress for quick lookup
     const progressMap = new Map();
@@ -29,7 +29,7 @@ export class ChallengesService {
     if (challenges.length > 0 && progressRecords.length === 0) {
       await this.initializeFirstChallenge(userId, challenges[0]._id.toString());
       // Refetch progress after initialization
-      const updatedProgress = await this.progressModel.find({ userId }).populate('challengeId').exec();
+      const updatedProgress = await this.progressModel.find({ userId }).exec();
       updatedProgress.forEach(progress => {
         progressMap.set(progress.challengeId.toString(), progress);
       });
@@ -174,9 +174,15 @@ export class ChallengesService {
     const normalizedUserAnswer = normalizeAnswer(userAnswer);
     const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
     
-    // Support multiple acceptable answers (comma-separated)
+    // First check if the answers match exactly
+    if (normalizedUserAnswer === normalizedCorrectAnswer) {
+      return true;
+    }
+    
+    // Support multiple acceptable answers (comma-separated in correctAnswer)
     const acceptableAnswers = normalizedCorrectAnswer.split(',').map(ans => ans.trim());
     
+    // Check if user answer matches any of the acceptable answers
     return acceptableAnswers.includes(normalizedUserAnswer);
   }
 
