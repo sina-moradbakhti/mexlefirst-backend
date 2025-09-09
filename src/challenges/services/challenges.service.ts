@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Challenge, ChallengeDocument } from '../schemas/challenge.schema';
 import { UserChallengeProgress, UserChallengeProgressDocument } from '../schemas/user-challenge-progress.schema';
 import { ChallengeResponseDto } from '../dto/challenge-response.dto';
 import { SubmissionResultDto } from '../dto/submission-result.dto';
+import { CreateChallengeDto } from '../dto/create-challenge.dto';
+import { UpdateChallengeDto } from '../dto/update-challenge.dto';
+import { ChallengeFilterDto } from '../dto/challenge-filter.dto';
+import { UserProgressSummaryDto, ChallengeProgressDetailDto } from '../dto/user-progress-response.dto';
+import { ChallengeResponsesDto } from '../dto/challenge-responses.dto';
 import { ImageService } from '../../image/services/image.service';
+import { PaginatedResponse } from '../../shared/dto/filter.dto';
 
 @Injectable()
 export class ChallengesService {
@@ -14,6 +20,8 @@ export class ChallengesService {
     @InjectModel(UserChallengeProgress.name) private progressModel: Model<UserChallengeProgressDocument>,
     private imageService: ImageService,
   ) {}
+
+  // ==================== STUDENT METHODS ====================
 
   async getChallengesWithProgress(userId: string): Promise<ChallengeResponseDto[]> {
     const challenges = await this.challengeModel.find().sort({ order: 1 }).exec();
@@ -167,6 +175,257 @@ export class ChallengesService {
     };
   }
 
+  // ==================== INSTRUCTOR/ADMIN METHODS ====================
+
+  async createChallenge(createChallengeDto: CreateChallengeDto): Promise<Challenge> {
+    const challenge = new this.challengeModel(createChallengeDto);
+    return challenge.save();
+  }
+
+  async getAllChallenges(filterDto: ChallengeFilterDto): Promise<PaginatedResponse<Challenge>> {
+    const query = {};
+
+    if (filterDto.difficulty) {
+      query['difficulty'] = filterDto.difficulty;
+    }
+
+    if (filterDto.hasPhotoExperiment) {
+      query['hasPhotoExperiment'] = filterDto.hasPhotoExperiment === 'true';
+    }
+
+    if (filterDto.search && filterDto.searchBy && ['title', 'description'].includes(filterDto.searchBy)) {
+      query[filterDto.searchBy] = {
+        $regex: filterDto.search,
+        $options: 'i',
+      };
+    }
+
+    const skip = (filterDto.page - 1) * filterDto.limit;
+    const sort = filterDto.sort || 'order';
+    const order = filterDto.order || 'asc';
+
+    const [items, total] = await Promise.all([
+      this.challengeModel
+        .find(query)
+        .skip(skip)
+        .limit(filterDto.limit)
+        .sort({ [sort]: order === 'asc' ? 1 : -1 })
+        .exec(),
+      this.challengeModel.countDocuments(query).exec(),
+    ]);
+
+    const pages = Math.ceil(total / filterDto.limit);
+
+    return {
+      data: items,
+      total,
+      page: filterDto.page,
+      limit: filterDto.limit,
+      pages,
+    };
+  }
+
+  async getChallengeById(id: string): Promise<Challenge> {
+    const challenge = await this.challengeModel.findById(id).exec();
+    if (!challenge) {
+      throw new NotFoundException('Challenge not found');
+    }
+    return challenge;
+  }
+
+  async updateChallenge(id: string, updateChallengeDto: UpdateChallengeDto): Promise<Challenge> {
+    const challenge = await this.challengeModel.findByIdAndUpdate(id, updateChallengeDto, { new: true }).exec();
+    if (!challenge) {
+      throw new NotFoundException('Challenge not found');
+    }
+    return challenge;
+  }
+
+  async deleteChallenge(id: string): Promise<{ message: string }> {
+    const challenge = await this.challengeModel.findById(id).exec();
+    if (!challenge) {
+      throw new NotFoundException('Challenge not found');
+    }
+
+    // Delete all user progress for this challenge
+    await this.progressModel.deleteMany({ challengeId: id }).exec();
+    
+    // Delete the challenge
+    await this.challengeModel.findByIdAndDelete(id).exec();
+
+    return { message: 'Challenge and all associated progress deleted successfully' };
+  }
+
+  async getUserProgressSummary(): Promise<UserProgressSummaryDto[]> {
+    const totalChallenges = await this.challengeModel.countDocuments().exec();
+    
+    const progressAggregation = await this.progressModel.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: '$user' },
+      {
+        $group: {
+          _id: '$userId',
+          userEmail: { $first: '$user.email' },
+          totalProgress: { $sum: 1 },
+          completedChallenges: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          },
+          unlockedChallenges: {
+            $sum: { $cond: [{ $eq: ['$status', 'unlocked'] }, 1, 0] }
+          },
+          lastActivity: { $max: '$updatedAt' }
+        }
+      }
+    ]);
+
+    return progressAggregation.map(item => ({
+      userId: item._id.toString(),
+      userEmail: item.userEmail,
+      totalChallenges,
+      completedChallenges: item.completedChallenges,
+      unlockedChallenges: item.unlockedChallenges,
+      progressPercentage: Math.round((item.completedChallenges / totalChallenges) * 100),
+      lastActivity: item.lastActivity
+    }));
+  }
+
+  async getUserProgressDetails(userId: string): Promise<ChallengeProgressDetailDto[]> {
+    const progressRecords = await this.progressModel
+      .find({ userId })
+      .populate('challengeId')
+      .sort({ 'challengeId.order': 1 })
+      .exec();
+
+    return progressRecords.map(progress => ({
+      challengeId: (progress.challengeId as any)._id.toString(),
+      challengeTitle: (progress.challengeId as any).title,
+      challengeOrder: (progress.challengeId as any).order,
+      status: progress.status,
+      userAnswer: progress.userAnswer,
+      isAnswerCorrect: progress.isAnswerCorrect,
+      photoUrl: progress.photoUrl,
+      completedAt: progress.completedAt,
+      createdAt: (progress as any).createdAt,
+      updatedAt: (progress as any).updatedAt
+    }));
+  }
+
+  async resetUserProgress(userId: string): Promise<{ message: string }> {
+    await this.progressModel.deleteMany({ userId }).exec();
+    
+    // Initialize first challenge
+    const firstChallenge = await this.challengeModel.findOne({ order: 1 }).exec();
+    if (firstChallenge) {
+      await this.initializeFirstChallenge(userId, firstChallenge._id.toString());
+    }
+
+    return { message: 'User progress reset successfully' };
+  }
+
+  async reorderChallenges(reorderData: { challengeId: string; newOrder: number }[]): Promise<{ message: string }> {
+    const bulkOps = reorderData.map(item => ({
+      updateOne: {
+        filter: { _id: item.challengeId },
+        update: { order: item.newOrder }
+      }
+    }));
+
+    await this.challengeModel.bulkWrite(bulkOps);
+    return { message: 'Challenges reordered successfully' };
+  }
+
+  async getChallengeResponses(challengeId: string, pagination: { page: number; limit: number }): Promise<ChallengeResponsesDto> {
+    // First verify the challenge exists
+    const challenge = await this.challengeModel.findById(challengeId).exec();
+    if (!challenge) {
+      throw new NotFoundException('Challenge not found');
+    }
+
+    const skip = (pagination.page - 1) * pagination.limit;
+
+    // Get all progress records for this challenge with user information
+    const progressRecords = await this.progressModel
+      .find({ challengeId })
+      .populate('userId', 'email role') // Only populate email and role fields
+      .sort({ updatedAt: -1 }) // Most recent first
+      .skip(skip)
+      .limit(pagination.limit)
+      .exec();
+
+    // Get total count for pagination
+    const totalResponses = await this.progressModel.countDocuments({ challengeId }).exec();
+
+    // Get statistics
+    const stats = await this.progressModel.aggregate([
+      { $match: { challengeId: new Types.ObjectId(challengeId) } },
+      {
+        $group: {
+          _id: null,
+          totalResponses: { $sum: 1 },
+          correctResponses: {
+            $sum: { $cond: [{ $eq: ['$isAnswerCorrect', true] }, 1, 0] }
+          },
+          incorrectResponses: {
+            $sum: { $cond: [{ $eq: ['$isAnswerCorrect', false] }, 1, 0] }
+          },
+          completedResponses: {
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const statistics = stats[0] || {
+      totalResponses: 0,
+      correctResponses: 0,
+      incorrectResponses: 0,
+      completedResponses: 0
+    };
+
+    // Map progress records to response format
+    const responses = progressRecords.map(progress => ({
+      userId: (progress.userId as any)._id.toString(),
+      userEmail: (progress.userId as any).email,
+      userName: (progress.userId as any).email.split('@')[0], // Use email prefix as name
+      userAnswer: progress.userAnswer,
+      isAnswerCorrect: progress.isAnswerCorrect,
+      status: progress.status,
+      photoUrl: progress.photoUrl,
+      submittedAt: progress.userAnswer ? (progress as any).updatedAt : null,
+      completedAt: progress.completedAt,
+      createdAt: (progress as any).createdAt,
+      updatedAt: (progress as any).updatedAt
+    }));
+
+    const pages = Math.ceil(totalResponses / pagination.limit);
+
+    return {
+      challengeId: challenge._id.toString(),
+      challengeTitle: challenge.title,
+      challengeOrder: challenge.order,
+      totalResponses: statistics.totalResponses,
+      correctResponses: statistics.correctResponses,
+      incorrectResponses: statistics.incorrectResponses,
+      completedResponses: statistics.completedResponses,
+      responses,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: totalResponses,
+        pages
+      }
+    };
+  }
+
+  // ==================== PRIVATE HELPER METHODS ====================
+
   private validateAnswer(userAnswer: string, correctAnswer: string): boolean {
     const normalizeAnswer = (answer: string) => 
       answer.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -226,7 +485,6 @@ export class ChallengesService {
     return false; // Already existed
   }
 
-  
   private mapChallengeToResponse(challenge: ChallengeDocument, progress?: UserChallengeProgressDocument): ChallengeResponseDto {
     const response: ChallengeResponseDto = {
       id: challenge._id.toString(),
